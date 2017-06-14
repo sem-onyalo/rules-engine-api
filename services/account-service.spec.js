@@ -8,15 +8,20 @@ const assert = require('chai').assert;
 const expect = require('chai').expect;
 const sinon = require('sinon');
 
-describe('Account service', () => {
+describe('AccountService', () => {
   let accountRepository;
   let accountService;
 
-  describe('isAccountLocked', () => {
-    beforeEach(function () {
-      accountRepository = new Repositories.AccountRepository();
-      accountService = new AccountService(accountRepository);
-    });
+  beforeEach(function () {
+    accountRepository = new Repositories.AccountRepository();
+    accountService = new AccountService(accountRepository);
+  });
+
+  it('should not be null', () => {
+    assert.isNotNull(accountService, 'AccountService instance is null');
+  });
+
+  describe('isAccountLocked()', () => {
 
     it('should export function', () => {
       expect(accountService.isAccountLocked).to.be.a('function');
