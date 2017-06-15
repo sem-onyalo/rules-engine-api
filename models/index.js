@@ -3,9 +3,13 @@
 const Account = require('./account');
 const BlockItemType = require('./blockitemtype');
 const BlockItem = require('./blockitem');
+const Config = require('./config');
+const RestApi = require('./rest-api');
 
 module.exports = {
   Account,
   BlockItemType,
-  BlockItem
+  BlockItem,
+  Config,
+  RestApi
 }

@@ -1,28 +1,26 @@
 "use strict";
 
-const Constants = require('./rest-api-constants');
+const Models = require('../../models');
 
 module.exports = class RestApiClient {
-  constructor() {
+  constructor() { }
 
-  }
-
-  getRequest(uri) {
-    let response = this.request(Constants.RequestMethod.Get, uri);
+  getRequest(uri, auth) {
+    let response = this.request(Models.RestApi.Constants.RequestMethod.GET, uri, auth);
     return response;
   }
 
-  postJsonRequest(uri, content) {
-    let response = this.postRequest(Constants.RequestMethod.Post, uri, Constants.ContentType.Json, content);
+  postJsonRequest(uri, auth, content) {
+    let response = this.postRequest(Models.RestApi.Constants.RequestMethod.POST, uri, auth, Models.RestApi.Constants.ContentType.JSON, content);
     return response;
   }
 
-  postRequest(uri, contentType, content) {
-    let response = this.request(Constants.RequestMethod.Post, uri, contentType, content);
+  postRequest(uri, auth, contentType, content) {
+    let response = this.request(Models.RestApi.Constants.RequestMethod.POST, uri, auth, contentType, content);
     return response;
   }
 
-  request(method, uri, contentType = null, content = null) {
+  request(method, uri, auth, contentType = null, content = null) {
     return null;
   }
 }
