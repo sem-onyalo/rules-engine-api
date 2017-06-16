@@ -21,7 +21,7 @@ describe('NetworkService', () => {
     assert.isNotNull(networkService, 'NetworkService instance is null');
   });
 
-  describe('isEmailBlocked()', () => {
+  describe('isEmailBlocked(email)', () => {
     it('should export function', () => {
       expect(networkService.isEmailBlocked).to.be.a('function');
     });

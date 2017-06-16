@@ -63,10 +63,9 @@ describe('SplunkClient', () => {
     });
 
     it('should call the RestApiClient function postRequest() with expected parameters and single search param', () => {
-      let query = 'search order %s', params = '127.0.0.1', output = 'json';
+      let query = 'search order %s', params = ['127.0.0.1'], output = 'json';
       let request = new Models.RestApi.SplunkSearchRequest(query, params, output);
-      let postJsonRequestStub = sinon
-        .stub(splunkClient, 'postJsonRequest');
+      let postJsonRequestStub = sinon.stub(splunkClient, 'postJsonRequest');
 
       let response = splunkClient.search(request);
 
@@ -74,6 +73,23 @@ describe('SplunkClient', () => {
 
       let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri;
       let expectedContent = '{"search":"search order 127.0.0.1","output_mode":"json"}';
+
+      sinon.assert.calledOnce(postJsonRequestStub);
+      sinon.assert.calledWith(postJsonRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+    });
+
+    it('should call the RestApiClient function postRequest() with expected parameters and multiple seach params', () => {
+      let query = 'search order %s | eval earliest=relative_time(%s, "%s")';
+      let params = ['127.0.0.1', '10/19/2016:0:0:0', '-1d'], output = 'json';
+      let request = new Models.RestApi.SplunkSearchRequest(query, params, output);
+      let postJsonRequestStub = sinon.stub(splunkClient, 'postJsonRequest');
+
+      let response = splunkClient.search(request);
+
+      postJsonRequestStub.restore();
+
+      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri;
+      let expectedContent = '{"search":"search order 127.0.0.1 | eval earliest=relative_time(10/19/2016:0:0:0, \\"-1d\\")","output_mode":"json"}';
 
       sinon.assert.calledOnce(postJsonRequestStub);
       sinon.assert.calledWith(postJsonRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);

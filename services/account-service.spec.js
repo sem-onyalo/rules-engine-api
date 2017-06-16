@@ -21,7 +21,7 @@ describe('AccountService', () => {
     assert.isNotNull(accountService, 'AccountService instance is null');
   });
 
-  describe('isAccountLocked()', () => {
+  describe('isAccountLocked(accountId)', () => {
 
     it('should export function', () => {
       expect(accountService.isAccountLocked).to.be.a('function');

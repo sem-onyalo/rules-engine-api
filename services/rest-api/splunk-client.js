@@ -2,6 +2,7 @@
 
 const Models = require('../../models');
 const RestApiClient = require('./rest-api-client');
+const SprintfJs = require('sprintf-js');
 
 module.exports = class SplunkClient extends RestApiClient {
   constructor(configService) {
@@ -24,7 +25,7 @@ module.exports = class SplunkClient extends RestApiClient {
     let apiAuth = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK
       , Models.Config.Splunk.Keys.API_AUTH_HEADER);
 
-    let searchRequestContent = searchRequest.SearchQuery.replace("%s", searchRequest.SearchQueryParams);
+    let searchRequestContent = SprintfJs.vsprintf(searchRequest.SearchQuery, searchRequest.SearchQueryParams);
 
     let jsonRequest = JSON.stringify({
       search : searchRequestContent,
