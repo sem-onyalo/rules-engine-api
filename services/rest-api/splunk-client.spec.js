@@ -29,16 +29,16 @@ describe('SplunkClient', () => {
     configServiceStub = sinon.stub(configService, 'getSetting');
 
     configServiceStub
-      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_URI)
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_URI)
       .returns(testSplunkApiUri);
+
+    configServiceStub
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_AUTH_HEADER)
+      .returns(testSplunkApiAuthHeader);
 
     configServiceStub
       .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_URI)
       .returns(testSplunkApiSearchUri);
-
-    configServiceStub
-      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_AUTH_HEADER)
-      .returns(testSplunkApiAuthHeader);
   });
 
   afterEach(function () {

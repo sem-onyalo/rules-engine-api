@@ -18,16 +18,6 @@ describe('SplunkConfig', () => {
     it('should define a key SPLUNK with value "Splunk"', () => {
       expect(SplunkConfig.Keys.SPLUNK).to.be.a('string');
       assert.strictEqual(SplunkConfig.Keys.SPLUNK, 'Splunk', 'SPLUNK config key not expected value');
-    })
-
-    it('should define a key API_URI with value "API_URI"', () => {
-      expect(SplunkConfig.Keys.API_URI).to.be.a('string');
-      assert.strictEqual(SplunkConfig.Keys.API_URI, 'API_URI', 'API_URI key not expected value');
-    });
-
-    it('should define a key API_AUTH_HEADER with value "API_AUTH_HEADER"', () => {
-      expect(SplunkConfig.Keys.API_AUTH_HEADER).to.be.a('string');
-      assert.strictEqual(SplunkConfig.Keys.API_AUTH_HEADER, 'API_AUTH_HEADER', 'API_AUTH_HEADER key not expected value');
     });
 
     it('should define a key API_SEARCH_URI with value "API_SEARCH_URI"', () => {
@@ -39,7 +29,7 @@ describe('SplunkConfig', () => {
   describe('SearchQueries', () => {
     it('should define an object of search queries', () => {
       expect(SplunkConfig.SearchQueries).to.be.an('object');
-    })
+    });
 
     it('should define a search query ORDER_RESEND_REQUESTS', () => {
       expect(SplunkConfig.SearchQueries.ORDER_RESEND_REQUESTS).to.be.a('string');

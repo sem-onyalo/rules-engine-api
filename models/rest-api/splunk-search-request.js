@@ -2,7 +2,7 @@
 
 module.exports = class SplunkSearchRequest {
 
-  /*
+  /**
    * Represents a request to search splunk
    * @constructor
    * @param {string} searchQuery - The query string for the search.

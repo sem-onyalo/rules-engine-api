@@ -10,20 +10,20 @@ module.exports = class SplunkClient extends RestApiClient {
     this._configService = configService;
   }
 
-  /*
+  /**
    * Splunk search
-   * @param {Models.RestApi.SplunkSearchRequest} searchRequest: The search request parameters.
+   * @param {Models.RestApi.SplunkSearchRequest} searchRequest - The search request object.
    *
    */
   search(searchRequest) {
     let apiUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK
-      , Models.Config.Splunk.Keys.API_URI);
+      , Models.Config.RestApi.Keys.API_URI);
+
+    let apiAuth = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK
+      , Models.Config.RestApi.Keys.API_AUTH_HEADER);
 
     let searchUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK
       , Models.Config.Splunk.Keys.API_SEARCH_URI);
-
-    let apiAuth = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK
-      , Models.Config.Splunk.Keys.API_AUTH_HEADER);
 
     let searchRequestContent = SprintfJs.vsprintf(searchRequest.SearchQuery, searchRequest.SearchQueryParams);
 
