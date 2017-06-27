@@ -13,18 +13,21 @@ const RuleService = require('./rule-service');
 describe('RuleService', () => {
   let accountService;
   let geolocationClient;
+  let blockItemRepository;
   let ruleRepository;
   let ruleService;
 
   let accountServiceStub;
   let geolocationClientStub;
+  let blockItemRepositoryStub;
   let ruleRepositoryStub;
 
   beforeEach(function () {
     accountService = new AccountService();
     geolocationClient = new GeolocationClient();
+    blockItemRepository = new Repositories.BlockItemRepository();
     ruleRepository = new Repositories.Rules.RuleRepository();
-    ruleService = new RuleService(accountService, geolocationClient, ruleRepository);
+    ruleService = new RuleService(accountService, geolocationClient, blockItemRepository, ruleRepository);
   });
 
   describe('executeRule(executeRuleRequest)', () => {
@@ -32,15 +35,25 @@ describe('RuleService', () => {
       expect(ruleService.executeRule).to.be.a('function');
     });
 
-    it('should return rule passed and rule score if countries from rule in repository and ip lookup match', () => {
-      let ruleId = 123, sourceIp = '127.0.0.1';
+    it('should throw an expection if the rule request is an unsupported type', () => {
+      let ruleRequest = function UnsupportedRuleRequest() {
+        this.RuleId = 123;
+      };
+
+      let executeRuleFn = function () { ruleService.executeRule(ruleRequest) };
+
+      expect(executeRuleFn).to.throw('Unsupported rule request type');
+    });
+
+    it('should run the source IP rule and return rule passed if countries from rule in repository and ip lookup match', () => {
+      let ruleId = 123, ruleScore = 0, sourceIp = '127.0.0.1';
       let country = new Models.Country(1, 'CA');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
       let ipRequest = new Models.RestApi.GeolocationIpLookupRequest(sourceIp);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(1, ruleId, [country.Code]));
+        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code]));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
@@ -57,19 +70,19 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isNotNull(ruleResponse, 'ExecuteRuleResponse should not be null');
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should return rule not passed and rule score if countries from rule in repository and ip lookup match', () => {
-      let ruleId = 123, sourceIp = '127.0.0.1';
+    it('should run the source IP rule and return rule not passed if countries from rule in repository and ip lookup match', () => {
+      let ruleId = 123, ruleScore = 0, sourceIp = '127.0.0.1';
       let country = new Models.Country(1, 'CA');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
       let ipRequest = new Models.RestApi.GeolocationIpLookupRequest(sourceIp);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(1, ruleId, [country.Code]));
+        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code]));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
@@ -86,7 +99,103 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isNotNull(ruleResponse, 'ExecuteRuleResponse should not be null');
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the source IP rule and return the rule score if the rule failed', () => {
+      let ruleId = 123, ruleScore = 2.5, sourceIp = '127.0.0.1';
+      let country1 = new Models.Country(1, 'CA'), country2 = new Models.Country(1, 'US');
+      let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
+      let ipRequest = new Models.RestApi.GeolocationIpLookupRequest(sourceIp);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code]));
+
+      geolocationClientStub = sinon
+        .stub(geolocationClient, 'ipLookup')
+        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      geolocationClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(geolocationClientStub);
+      sinon.assert.calledWith(geolocationClientStub, sourceIp);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to expected value');
+    });
+
+    it('should run the source IP rule and return rule score 0 if the rule passed', () => {
+      let ruleId = 123, ruleScore = 2.5, sourceIp = '127.0.0.1';
+      let country1 = new Models.Country(1, 'CA'), country2 = new Models.Country(1, 'US');
+      let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
+      let ipRequest = new Models.RestApi.GeolocationIpLookupRequest(sourceIp);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code]));
+
+      geolocationClientStub = sinon
+        .stub(geolocationClient, 'ipLookup')
+        .returns(new Models.RestApi.GeolocationIpLookupResponse('US'));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      geolocationClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(geolocationClientStub);
+      sinon.assert.calledWith(geolocationClientStub, sourceIp);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score was not set to expected value');
+    });
+
+    it('should run the email blocklist rule and return rule passed if email is not on blocklist', () => {
+      let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
+
+      blockItemRepositoryStub = sinon
+        .stub(blockItemRepository, 'selectByTypeAndValue')
+        .returns(null);
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      blockItemRepositoryStub.restore();
+
+      sinon.assert.calledOnce(blockItemRepositoryStub);
+      sinon.assert.calledWith(blockItemRepositoryStub, Models.BlockItemType.Email, email);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the email blocklist rule and return rule failed if email is on blocklist', () => {
+      let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
+
+      blockItemRepositoryStub = sinon
+        .stub(blockItemRepository, 'selectByTypeAndValue')
+        .returns(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com'));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      blockItemRepositoryStub.restore();
+
+      sinon.assert.calledOnce(blockItemRepositoryStub);
+      sinon.assert.calledWith(blockItemRepositoryStub, Models.BlockItemType.Email, email);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
   });
