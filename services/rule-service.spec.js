@@ -11,23 +11,26 @@ const Repositories = require('../repositories')
 const RuleService = require('./rule-service');
 
 describe('RuleService', () => {
-  let accountService;
   let geolocationClient;
+  let accountRepository;
   let blockItemRepository;
   let ruleRepository;
+  let accountService;
   let ruleService;
 
-  let accountServiceStub;
   let geolocationClientStub;
+  let accountRepositoryStub;
   let blockItemRepositoryStub;
+  let accountServiceStub;
   let ruleRepositoryStub;
 
   beforeEach(function () {
-    accountService = new AccountService();
     geolocationClient = new GeolocationClient();
+    accountRepository = new Repositories.AccountRepository();
     blockItemRepository = new Repositories.BlockItemRepository();
     ruleRepository = new Repositories.Rules.RuleRepository();
-    ruleService = new RuleService(accountService, geolocationClient, blockItemRepository, ruleRepository);
+    accountService = new AccountService();
+    ruleService = new RuleService(accountService, geolocationClient, accountRepository, blockItemRepository, ruleRepository);
   });
 
   describe('executeRule(executeRuleRequest)', () => {
@@ -197,6 +200,44 @@ describe('RuleService', () => {
 
       assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the account locked rule and return rule failed if account is locked', () => {
+      let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = true;
+      let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
+
+      accountRepositoryStub = sinon
+        .stub(accountRepository, 'selectById')
+        .returns(new Models.Account(accountId, isAccountLocked));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      accountRepositoryStub.restore();
+
+      sinon.assert.calledOnce(accountRepositoryStub);
+      sinon.assert.calledWith(accountRepositoryStub, accountId);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the account locked rule and return rule passed if account is not locked', () => {
+      let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = false;
+      let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
+
+      accountRepositoryStub = sinon
+        .stub(accountRepository, 'selectById')
+        .returns(new Models.Account(accountId, isAccountLocked));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      accountRepositoryStub.restore();
+
+      sinon.assert.calledOnce(accountRepositoryStub);
+      sinon.assert.calledWith(accountRepositoryStub, accountId);
+
+      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
   });
 });
