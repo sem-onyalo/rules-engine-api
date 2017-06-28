@@ -33,6 +33,8 @@ module.exports = class RuleService {
       return this.executeEmailBlocklistRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteAccountLockedRuleRequest) {
       return this.executeAccountLockedRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteDifferentEmailRuleRequest) {
+      return this.executeDifferentEmailRule(executeRuleRequest);
     } else {
       throw 'Unsupported rule request type';
     }
@@ -86,4 +88,18 @@ module.exports = class RuleService {
     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass);
     return response;
   }
+
+  /**
+   * Represents a request to execute a different email rule.
+   * @name executeDifferentEmailRule
+   * @param {Models.Rules.ExecuteDifferentEmailRuleRequest} executeRuleRequest - The different email rule execution request object.
+   * @returns {Models.Rules.ExecuteRuleResponse}
+   */
+   executeDifferentEmailRule(executeRuleRequest) {
+     let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+     let isRulePass = executeRuleRequest.ExpectedEmail == executeRuleRequest.ActualEmail;
+     let ruleScore = !isRulePass ? rule.Score : 0;
+     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+     return response;
+   }
 };

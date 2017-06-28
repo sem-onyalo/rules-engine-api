@@ -73,7 +73,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
@@ -102,7 +102,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
@@ -131,7 +131,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to expected value');
     });
 
@@ -160,8 +160,8 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(geolocationClientStub);
       sinon.assert.calledWith(geolocationClientStub, sourceIp);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
-      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score was not set to expected value');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
     it('should run the email blocklist rule and return rule passed if email is not on blocklist', () => {
@@ -179,7 +179,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(blockItemRepositoryStub);
       sinon.assert.calledWith(blockItemRepositoryStub, Models.BlockItemType.Email, email);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
@@ -198,7 +198,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(blockItemRepositoryStub);
       sinon.assert.calledWith(blockItemRepositoryStub, Models.BlockItemType.Email, email);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
@@ -217,7 +217,7 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(accountRepositoryStub);
       sinon.assert.calledWith(accountRepositoryStub, accountId);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
@@ -236,8 +236,78 @@ describe('RuleService', () => {
       sinon.assert.calledOnce(accountRepositoryStub);
       sinon.assert.calledWith(accountRepositoryStub, accountId);
 
-      assert.isDefined(ruleResponse, 'ExecuteRuleResponse should be defined');
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the different email rule and return rule failed if emails are different', () => {
+      let ruleId = 123, ruleScore = 0, expectedEmail = 'jdoe@nomail.com', actualEmail = 'john.doe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the different email rule and return rule passed if email are the same', () => {
+      let ruleId = 123, ruleScore = 0, expectedEmail = 'jdoe@nomail.com', actualEmail = 'jdoe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the different email rule and return the rule score if the rule failed', () => {
+      let ruleId = 123, ruleScore = 2.5, expectedEmail = 'jdoe@nomail.com', actualEmail = 'john.doe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to the expected value');
+    });
+
+    it('should run the different email rule and return a rule score 0 if the rule passed', () => {
+      let ruleId = 123, ruleScore = 2.5, expectedEmail = 'jdoe@nomail.com', actualEmail = 'jdoe@nomail.com';
+      let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
   });
 });
