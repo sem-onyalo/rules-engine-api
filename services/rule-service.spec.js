@@ -5,32 +5,36 @@ const expect = require('chai').expect;
 const sinon = require('sinon');
 
 const AccountService = require('./account-service');
-const GeolocationClient = require('./rest-api/geolocation-client');
 const Models = require('../models');
-const Repositories = require('../repositories')
+const Repositories = require('../repositories');
+const RestApi = require('./rest-api');
 const RuleService = require('./rule-service');
 
 describe('RuleService', () => {
+  let ruleService;
+  let accountService;
   let geolocationClient;
+  let splunkClient;
   let accountRepository;
   let blockItemRepository;
   let ruleRepository;
-  let accountService;
-  let ruleService;
 
+  let accountServiceStub;
   let geolocationClientStub;
+  let splunkClientStub;
   let accountRepositoryStub;
   let blockItemRepositoryStub;
-  let accountServiceStub;
   let ruleRepositoryStub;
 
   beforeEach(function () {
-    geolocationClient = new GeolocationClient();
+    accountService = new AccountService();
+    geolocationClient = new RestApi.GeolocationClient();
+    splunkClient = new RestApi.SplunkClient();
     accountRepository = new Repositories.AccountRepository();
     blockItemRepository = new Repositories.BlockItemRepository();
     ruleRepository = new Repositories.Rules.RuleRepository();
-    accountService = new AccountService();
-    ruleService = new RuleService(accountService, geolocationClient, accountRepository, blockItemRepository, ruleRepository);
+
+    ruleService = new RuleService(accountService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository);
   });
 
   describe('executeRule(executeRuleRequest)', () => {
@@ -305,6 +309,166 @@ describe('RuleService', () => {
 
       sinon.assert.calledOnce(ruleRepositoryStub);
       sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
+    });
+
+    it('should run the time since order created rule and return rule failed if search count > rule threshold count', () => {
+      let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
+      let ruleScore = 0, ruleThresholdCount = 0, ruleThresholdMin = 180;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the time since order created rule and return rule passed if search count == rule threshould count', () => {
+      let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
+      let ruleScore = 0, ruleThresholdCount = 1, ruleThresholdMin = 180;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the time since order created rule and return rule passed if search count < rule threshould count', () => {
+      let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
+      let ruleScore = 0, ruleThresholdCount = 2, ruleThresholdMin = 180;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the time since order created rule and return rule score if rule failed', () => {
+      let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
+      let ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to the expected value');
+    });
+
+    it('should run the time since order created rule and return rule score 0 if rule passed', () => {
+      let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
+      let ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
 
       assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');

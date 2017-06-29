@@ -7,14 +7,16 @@ module.exports = class RuleService {
    * Represents rule operations.
    * @constructor
    * @param {Services.AccountService} accountService - The account service.
-   * @param {Services.RestApi.GeolocationClient} geolocationClient - The geolocation rest client.
+   * @param {Services.RestApi.GeolocationClient} geolocationClient - The geolocation rest api client.
+   * @param {Services.RestApi.SplunkClient} splunkClient - The splunk rest api client.
    * @param {Repositories.AccountRepository} accountRepository - The account repository.
    * @param {Repositories.BlockItemRepository} blockItemRepository - The block item repository.
-   * @param {Repositories.ruleRepository} ruleRepository - The rule repository.
+   * @param {Repositories.RuleRepository} ruleRepository - The rule repository.
    */
-  constructor(accountService, geolocationClient, accountRepository, blockItemRepository, ruleRepository) {
+  constructor(accountService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository) {
     this._accountService = accountService;
     this._geolocationClient = geolocationClient;
+    this._splunkClient = splunkClient;
     this._accountRepository = accountRepository;
     this._blockItemRepository = blockItemRepository;
     this._ruleRepository = ruleRepository;
@@ -27,14 +29,16 @@ module.exports = class RuleService {
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
   executeRule(executeRuleRequest) {
-    if (executeRuleRequest instanceof Models.Rules.ExecuteSourceIpRuleRequest) {
-      return this.executeSourceIpRule(executeRuleRequest);
+    if (executeRuleRequest instanceof Models.Rules.ExecuteAccountLockedRuleRequest) {
+      return this.executeAccountLockedRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteEmailBlocklistRuleRequest) {
       return this.executeEmailBlocklistRule(executeRuleRequest);
-    } else if (executeRuleRequest instanceof Models.Rules.ExecuteAccountLockedRuleRequest) {
-      return this.executeAccountLockedRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteDifferentEmailRuleRequest) {
       return this.executeDifferentEmailRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteSourceIpRuleRequest) {
+      return this.executeSourceIpRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest) {
+      return this.executeTimeSinceOrderCreatedRule(executeRuleRequest);
     } else {
       throw 'Unsupported rule request type';
     }
@@ -95,11 +99,34 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteDifferentEmailRuleRequest} executeRuleRequest - The different email rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-   executeDifferentEmailRule(executeRuleRequest) {
+  executeDifferentEmailRule(executeRuleRequest) {
      let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
      let isRulePass = executeRuleRequest.ExpectedEmail == executeRuleRequest.ActualEmail;
      let ruleScore = !isRulePass ? rule.Score : 0;
      let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
      return response;
-   }
+  }
+
+  /**
+   * Represents a request to execute a time since order created rule.
+   * @name executeDifferentEmailRule
+   * @param {Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest} executeRuleRequest - The time since last order created rule execution request object.
+   * @returns {Models.Rules.ExecuteRuleResponse}
+   */
+  executeTimeSinceOrderCreatedRule(executeRuleRequest) {
+     let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+     let splunkSearchParams = [executeRuleRequest.OrderId, 'now()', (rule.ThresholdMinutes * -1).toString() + 'm'];
+     let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(
+       Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME,
+       splunkSearchParams,
+       'json'
+     );
+
+     let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
+
+     let isRulePass = splunkSearchResponse.Count <= rule.ThresholdCount;
+     let ruleScore = !isRulePass ? rule.Score : 0;
+     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+     return response;
+  }
 };

@@ -16,13 +16,15 @@ describe('RuleFrequency', () => {
     let rule = new RuleFrequency();
     expect(rule).to.have.property('Id');
     expect(rule).to.have.property('Score');
+    expect(rule).to.have.property('ThresholdCount');
     expect(rule).to.have.property('ThresholdMinutes');
   });
 
   it('should set the defined properties on initialization', () => {
-    let rule = new RuleFrequency(123, 2.5, 180);
+    let rule = new RuleFrequency(123, 2.5, 2, 180);
     assert.strictEqual(rule.Id, 123, 'Id was not set to the expected value');
     assert.strictEqual(rule.Score, 2.5, 'Score was not set to the expected value');
+    assert.strictEqual(rule.ThresholdCount, 2, 'ThresholdCount was not set to the expected value');
     assert.strictEqual(rule.ThresholdMinutes, 180, 'ThresholdMinutes was not set to the expected value');
   });
 });
