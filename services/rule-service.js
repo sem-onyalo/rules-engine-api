@@ -37,8 +37,8 @@ module.exports = class RuleService {
       return this.executeDifferentEmailRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteSourceIpRuleRequest) {
       return this.executeSourceIpRule(executeRuleRequest);
-    } else if (executeRuleRequest instanceof Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest) {
-      return this.executeTimeSinceOrderCreatedRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest) {
+      return this.executeOrdersCreatedInTimespanRule(executeRuleRequest);
     } else {
       throw 'Unsupported rule request type';
     }
@@ -108,16 +108,16 @@ module.exports = class RuleService {
   }
 
   /**
-   * Represents a request to execute a time since order created rule.
-   * @name executeDifferentEmailRule
-   * @param {Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest} executeRuleRequest - The time since last order created rule execution request object.
+   * Represents a request to execute an orders created in timespan rule.
+   * @name executeOrdersCreatedInTimespanRule
+   * @param {Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest} executeRuleRequest - The orders created in a timespan rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeTimeSinceOrderCreatedRule(executeRuleRequest) {
+  executeOrdersCreatedInTimespanRule(executeRuleRequest) {
      let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
      let splunkSearchParams = [executeRuleRequest.OrderId, 'now()', (rule.ThresholdMinutes * -1).toString() + 'm'];
      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(
-       Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME,
+       Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN,
        splunkSearchParams,
        'json'
      );

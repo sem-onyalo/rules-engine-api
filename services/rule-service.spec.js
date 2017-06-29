@@ -318,9 +318,9 @@ describe('RuleService', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
-      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN;
       let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
-      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(ruleId, accountId, orderId);
       let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
 
       ruleRepositoryStub = sinon
@@ -350,9 +350,9 @@ describe('RuleService', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 1, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
-      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN;
       let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
-      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(ruleId, accountId, orderId);
       let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
 
       ruleRepositoryStub = sinon
@@ -382,9 +382,9 @@ describe('RuleService', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
-      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN;
       let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
-      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(ruleId, accountId, orderId);
       let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
 
       ruleRepositoryStub = sinon
@@ -414,9 +414,9 @@ describe('RuleService', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
-      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN;
       let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
-      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(ruleId, accountId, orderId);
       let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
 
       ruleRepositoryStub = sinon
@@ -446,9 +446,9 @@ describe('RuleService', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
-      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDER_PLACED_SINCE_TIME;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN;
       let splunkSearchParams = ['a1b2c3', 'now()', '-180m'], splunkSearchOutput = 'json';
-      let ruleRequest = new Models.Rules.ExecuteTimeSinceOrderCreatedRuleRequest(ruleId, accountId, orderId);
+      let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(ruleId, accountId, orderId);
       let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
 
       ruleRepositoryStub = sinon

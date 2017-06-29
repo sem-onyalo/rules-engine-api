@@ -6,7 +6,7 @@ const expect = require('chai').expect;
 const SplunkSearchQueries = require('./splunk-search-queries');
 
 describe('SplunkSearchQueries', () => {
-  it('should define the properties: ORDER_PLACED_SINCE_TIME', () => {
-    expect(SplunkSearchQueries).to.have.property('ORDER_PLACED_SINCE_TIME');
+  it('should define the properties: ORDERS_CREATED_IN_TIMESPAN', () => {
+    expect(SplunkSearchQueries).to.have.property('ORDERS_CREATED_IN_TIMESPAN');
   });
 });
