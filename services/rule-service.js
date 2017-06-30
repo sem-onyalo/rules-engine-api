@@ -39,6 +39,8 @@ module.exports = class RuleService {
       return this.executeSourceIpRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest) {
       return this.executeOrdersCreatedInTimespanRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest) {
+      return this.executeRequestsFromIpInTimespanRule(executeRuleRequest);
     } else {
       throw 'Unsupported rule request type';
     }
@@ -128,5 +130,33 @@ module.exports = class RuleService {
      let ruleScore = !isRulePass ? rule.Score : 0;
      let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
      return response;
+  }
+
+  /**
+   * Represents a request to execute a requests from IP in timespan rule.
+   * @name executeRequestsFromIpInTimespanRule
+   * @param {Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest} executeRuleRequest - The requests from an IP address in a timespan execution request object.
+   * @returns {Models.Rules.ExecuteRuleResponse}
+   */
+  executeRequestsFromIpInTimespanRule(executeRuleRequest) {
+    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+    let splunkSearchParams = [
+      executeRuleRequest.IpAddress,
+      'now()',
+      (rule.ThresholdMinutes * -1).toString() + 'm',
+      executeRuleRequest.AccountId
+    ];
+    let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(
+      Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP,
+      splunkSearchParams,
+      'json'
+    );
+
+    let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
+
+    let isRulePass = splunkSearchResponse.Count <= rule.ThresholdCount;
+    let ruleScore = !isRulePass ? rule.Score : 0;
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+    return response;
   }
 };

@@ -2,7 +2,7 @@
 
 const ExecuteRuleRequest = require('./execute-rule-request');
 
-module.exports = class ExecuteTimeSinceOrderCreatedRuleRequest extends ExecuteRuleRequest {
+module.exports = class ExecuteOrdersCreatedInTimespanRuleRequest extends ExecuteRuleRequest {
   /**
    * Represents a request to execute a rule relating to the time since an order was created.
    * @constructor

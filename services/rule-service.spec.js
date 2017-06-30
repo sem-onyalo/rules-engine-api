@@ -314,7 +314,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
-    it('should run the time since order created rule and return rule failed if search count > rule threshold count', () => {
+    it('should run the orders created in timespan rule and return rule failed if search count > rule threshold count', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -346,7 +346,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the time since order created rule and return rule passed if search count == rule threshould count', () => {
+    it('should run the orders created in timespan rule and return rule passed if search count == rule threshould count', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 1, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -378,7 +378,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the time since order created rule and return rule passed if search count < rule threshould count', () => {
+    it('should run the orders created in timespan rule and return rule passed if search count < rule threshould count', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -410,7 +410,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the time since order created rule and return rule score if rule failed', () => {
+    it('should run the orders created in timespan rule and return rule score if rule failed', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -442,7 +442,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to the expected value');
     });
 
-    it('should run the time since order created rule and return rule score 0 if rule passed', () => {
+    it('should run the orders created in timespan rule and return rule score 0 if rule passed', () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -454,6 +454,166 @@ describe('RuleService', () => {
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
         .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
+    });
+
+    it('should run the requests from ip in timespan rule and return rule failed if search count > rule threshold', () => {
+      let ipAddress = '127.0.0.1', accountId = '456';
+      let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180, accountCountThreshold = 2;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP;
+      let splunkSearchParams = ['127.0.0.1', 'now()', '-180m', '456'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(ruleId, ipAddress, accountId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the requests from ip in timespan rule and return rule passed if search count == rule threshold', () => {
+      let ipAddress = '127.0.0.1', accountId = '456';
+      let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 1, ruleThresholdMin = 180, accountCountThreshold = 2;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP;
+      let splunkSearchParams = ['127.0.0.1', 'now()', '-180m', '456'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(ruleId, ipAddress, accountId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the requests from ip in timespan rule and return rule passed if search count < rule threshold', () => {
+      let ipAddress = '127.0.0.1', accountId = '456';
+      let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180, accountCountThreshold = 2;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP;
+      let splunkSearchParams = ['127.0.0.1', 'now()', '-180m', '456'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(ruleId, ipAddress, accountId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the requests from ip in timespan rule and return rule score if the rule failed', () => {
+      let ipAddress = '127.0.0.1', accountId = '456';
+      let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180, accountCountThreshold = 2;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP;
+      let splunkSearchParams = ['127.0.0.1', 'now()', '-180m', '456'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(ruleId, ipAddress, accountId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.calledOnce(ruleRepositoryStub);
+      sinon.assert.calledWith(ruleRepositoryStub, ruleId);
+
+      sinon.assert.calledOnce(splunkClientStub);
+      sinon.assert.calledWith(splunkClientStub, splunkSearchRequest);
+
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to expected value');
+    });
+
+    it('should run the requests from ip in timespan rule and return rule score 0 if the rule passed', () => {
+      let ipAddress = '127.0.0.1', accountId = '456';
+      let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 1, ruleThresholdMin = 180, accountCountThreshold = 2;
+      let splunkSearchCount = 1;
+      let splunkSearchQuery = Models.RestApi.SplunkSearchQueries.REQUESTS_FROM_IP;
+      let splunkSearchParams = ['127.0.0.1', 'now()', '-180m', '456'], splunkSearchOutput = 'json';
+      let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(ruleId, ipAddress, accountId);
+      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(splunkSearchQuery, splunkSearchParams, splunkSearchOutput);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
