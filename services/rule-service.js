@@ -33,6 +33,8 @@ module.exports = class RuleService {
       return this.executeAccountLockedRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteEmailBlocklistRuleRequest) {
       return this.executeEmailBlocklistRule(executeRuleRequest);
+    } else if (executeRuleRequest instanceof Models.Rules.ExecuteScoreThresholdRuleRequest) {
+      return this.executeScoreThresholdRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteDifferentEmailRuleRequest) {
       return this.executeDifferentEmailRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteSourceIpRuleRequest) {
@@ -156,6 +158,43 @@ module.exports = class RuleService {
 
     let isRulePass = splunkSearchResponse.Count <= rule.ThresholdCount;
     let ruleScore = !isRulePass ? rule.Score : 0;
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+    return response;
+  }
+
+  /**
+   * Represents a request to execute a score threshold rule.
+   * @name executeScoreThresholdRule
+   * @param {Models.Rules.ExecuteScoreThresholdRuleRequest} executeRuleRequest - The score threshold execution request object.
+   * @returns {Models.Rules.ExecuteRuleResponse}
+   */
+  executeScoreThresholdRule(executeRuleRequest) {
+    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+
+    let ruleScore = 0;
+    for(let i = 0; i < rule.ChildRules.length; i++) {
+      if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.DIFFERENT_EMAIL) {
+        let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.ExpectedEmail, executeRuleRequest.ActualEmail);
+        let ruleResponse = this.executeDifferentEmailRule(ruleRequest);
+        ruleScore += ruleResponse.RuleScore;
+      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.SOURCE_IP) {
+        let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.SourceIp);
+        let ruleResponse = this.executeSourceIpRule(ruleRequest);
+        ruleScore += ruleResponse.RuleScore;
+      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.ORDERS_CREATED) {
+        let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.AccountId, executeRuleRequest.OrderId);
+        let ruleResponse = this.executeOrdersCreatedInTimespanRule(ruleRequest);
+        ruleScore += ruleResponse.RuleScore;
+      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.REQUESTS_FROM_IP) {
+        let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.SourceIp, executeRuleRequest.AccountId);
+        let ruleResponse = this.executeRequestsFromIpInTimespanRule(ruleRequest);
+        ruleScore += ruleResponse.RuleScore;
+      } else {
+        throw 'Unsupported rule type';
+      }
+    }
+
+    let isRulePass = rule.Threshold >= ruleScore;
     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
     return response;
   }

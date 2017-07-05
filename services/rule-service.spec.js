@@ -633,5 +633,176 @@ describe('RuleService', () => {
       assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
+
+    it('should run the score threshold rule and return a combined rule score and rule failed if combined rule score > threshold', () => {
+      let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
+      let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let childRules = [
+        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
+        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
+        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
+        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+      ];
+      let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
+      let splunkSearchCount = 1;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 2, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
+      let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
+      let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
+      let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
+
+      ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
+
+      ruleRepositoryStub
+        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+
+      ruleRepositoryStub
+        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+
+      ruleRepositoryStub
+        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+
+      ruleRepositoryStub
+        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+
+      ruleRepositoryStub
+        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+
+      geolocationClientStub = sinon
+        .stub(geolocationClient, 'ipLookup');
+
+      geolocationClientStub
+        .withArgs(sourceIp)
+        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      geolocationClientStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.callCount(ruleRepositoryStub, 5);
+      sinon.assert.calledOnce(geolocationClientStub);
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+      assert.strictEqual(ruleResponse.RuleScore, 10, 'Rule score was not expected value');
+    });
+
+    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score == threshold', () => {
+      let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
+      let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let childRules = [
+        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
+        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
+        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
+        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+      ];
+      let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
+      let splunkSearchCount = 1;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
+      let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
+      let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
+      let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
+
+      ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
+
+      ruleRepositoryStub
+        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+
+      ruleRepositoryStub
+        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+
+      ruleRepositoryStub
+        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+
+      ruleRepositoryStub
+        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+
+      ruleRepositoryStub
+        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+
+      geolocationClientStub = sinon
+        .stub(geolocationClient, 'ipLookup');
+
+      geolocationClientStub
+        .withArgs(sourceIp)
+        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      geolocationClientStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.callCount(ruleRepositoryStub, 5);
+      sinon.assert.calledOnce(geolocationClientStub);
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+      assert.strictEqual(ruleResponse.RuleScore, 9, 'Rule score was not expected value');
+    });
+
+    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score < threshold', () => {
+      let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
+      let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let childRules = [
+        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
+        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
+        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
+        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+      ];
+      let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
+      let splunkSearchCount = 1;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 2, requestsFromIpRuleScore = 4;
+      let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
+      let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
+      let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
+
+      ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
+
+      ruleRepositoryStub
+        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+
+      ruleRepositoryStub
+        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+
+      ruleRepositoryStub
+        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+
+      ruleRepositoryStub
+        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+
+      ruleRepositoryStub
+        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+
+      geolocationClientStub = sinon
+        .stub(geolocationClient, 'ipLookup');
+
+      geolocationClientStub
+        .withArgs(sourceIp)
+        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+
+      splunkClientStub = sinon
+        .stub(splunkClient, 'search')
+        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+
+      let ruleResponse = ruleService.executeRule(ruleRequest);
+
+      ruleRepositoryStub.restore();
+      geolocationClientStub.restore();
+      splunkClientStub.restore();
+
+      sinon.assert.callCount(ruleRepositoryStub, 5);
+      sinon.assert.calledOnce(geolocationClientStub);
+      assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
+      assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+      assert.strictEqual(ruleResponse.RuleScore, 8, 'Rule score was not expected value');
+    });
   });
 });

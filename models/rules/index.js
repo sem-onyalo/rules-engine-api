@@ -7,11 +7,14 @@ const ExecuteOrdersCreatedInTimespanRuleRequest = require('./execute-orders-crea
 const ExecuteRequestsFromIpInTimespanRuleRequest = require('./execute-requests-from-ip-in-timespan-rule-request');
 const ExecuteRuleResponse = require('./execute-rule-response');
 const ExecuteRuleRequest = require('./execute-rule-request');
+const ExecuteScoreThresholdRuleRequest = require('./execute-score-threshold-rule-request');
 const ExecuteSourceIpRuleRequest = require('./execute-source-ip-rule-request');
 const Rule = require('./rule');
 const RuleAccountFrequency = require('./rule-account-frequency');
 const RuleFrequency = require('./rule-frequency');
+const RuleScoreThreshold = require('./rule-score-threshold');
 const RuleSourceIp = require('./rule-source-ip');
+const RuleType = require('./rule-type');
 
 module.exports = {
   ExecuteAccountLockedRuleRequest,
@@ -21,9 +24,12 @@ module.exports = {
   ExecuteRequestsFromIpInTimespanRuleRequest,
   ExecuteRuleResponse,
   ExecuteRuleRequest,
+  ExecuteScoreThresholdRuleRequest,
   ExecuteSourceIpRuleRequest,
   Rule,
   RuleAccountFrequency,
   RuleFrequency,
-  RuleSourceIp
+  RuleScoreThreshold,
+  RuleSourceIp,
+  RuleType
 }
