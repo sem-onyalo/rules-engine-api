@@ -14,6 +14,7 @@
     "sinon": "^2.3.4"
   },
   "dependencies": {
+    "nodemailer": "^4.0.1",
     "sprintf-js": "^1.1.1"
   }
 }

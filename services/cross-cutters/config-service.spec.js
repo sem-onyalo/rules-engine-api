@@ -1,20 +1,15 @@
 "use strict";
 
-const Config = require('../../config');
-const ConfigService = require('./config-service');
-
 const assert = require('chai').assert;
 const expect = require('chai').expect;
+
+const ConfigService = require('./config-service');
 
 describe('ConfigService', () => {
   let configService;
 
   beforeEach(function () {
     configService = new ConfigService();
-  });
-
-  it('should not be null', () => {
-    assert.isNotNull(configService, 'Config service instance is null');
   });
 
   describe('getSetting(type, key)', () => {
