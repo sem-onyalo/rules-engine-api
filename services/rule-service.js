@@ -7,19 +7,46 @@ module.exports = class RuleService {
    * Represents rule operations.
    * @constructor
    * @param {Services.AccountService} accountService - The account service.
+   * @param {Services.CrossCutters.EmailService} emailService - The email service.
    * @param {Services.RestApi.GeolocationClient} geolocationClient - The geolocation rest api client.
    * @param {Services.RestApi.SplunkClient} splunkClient - The splunk rest api client.
    * @param {Repositories.AccountRepository} accountRepository - The account repository.
    * @param {Repositories.BlockItemRepository} blockItemRepository - The block item repository.
    * @param {Repositories.RuleRepository} ruleRepository - The rule repository.
+   * @param {Repositories.RuleSetRepository} ruleSetRepository - The rule set repository.
    */
-  constructor(accountService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository) {
+  constructor(accountService, emailService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository, ruleSetRepository) {
     this._accountService = accountService;
+    this._emailService = emailService;
     this._geolocationClient = geolocationClient;
     this._splunkClient = splunkClient;
     this._accountRepository = accountRepository;
     this._blockItemRepository = blockItemRepository;
     this._ruleRepository = ruleRepository;
+    this._ruleSetRepository = ruleSetRepository;
+  }
+
+  /**
+   * Represents a request to execute a rule set.
+   * @name executeRuleSet
+   * @param {Models.Rules.ExecuteRuleSetRequest} executeRuleSetRequest - The rule set execution object.
+   * @returns {Models.Rules.ExecuteRuleSetResponse}
+   */
+  executeRuleSet(executeRuleSetRequest) {
+    let ruleSet = this._ruleSetRepository.selectById(executeRuleSetRequest.RuleSetId);
+
+    for (let i = 0; i < ruleSet.Rules.length; i++) {
+      if (ruleSet.Rules[i].Type == Models.Rules.RuleType.ACCOUNT_LOCKED) {
+        let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.AccountId);
+        let ruleResponse = this.executeAccountLockedRule(ruleRequest);
+      } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.EMAIL_BLOCKLIST) {
+        let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.ActualEmail);
+        let ruleResponse = this.executeEmailBlocklistRule(ruleRequest);
+      } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.SCORE_THRESHOLD) {
+        let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.OrderId, executeRuleSetRequest.AccountId, executeRuleSetRequest.ExpectedEmail, executeRuleSetRequest.ActualEmail, executeRuleSetRequest.SourceIp);
+        let ruleResponse = this.executeScoreThresholdRule(ruleRequest);
+      }
+    }
   }
 
   /**
@@ -58,16 +85,16 @@ module.exports = class RuleService {
     let sourceIpRule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
     let ipLookupResponse = this._geolocationClient.ipLookup(executeRuleRequest.SourceIp);
 
-    let isRulePass = false, ruleScore = sourceIpRule.Score;
+    let rulePassed = false, ruleScore = sourceIpRule.Score;
     for (let i = 0; i < sourceIpRule.CountryCodes.length; i++) {
       if (ipLookupResponse.Country == sourceIpRule.CountryCodes[i]) {
-        isRulePass = true;
+        rulePassed = true;
         ruleScore = 0;
         break;
       }
     }
 
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
     return response;
   }
 
@@ -79,8 +106,8 @@ module.exports = class RuleService {
    */
   executeEmailBlocklistRule(executeRuleRequest) {
     let blockItem = this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, executeRuleRequest.Email);
-    let isRulePass = blockItem == null;
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass);
+    let rulePassed = blockItem == null;
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed);
     return response;
   }
 
@@ -91,9 +118,11 @@ module.exports = class RuleService {
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
   executeAccountLockedRule(executeRuleRequest) {
+    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
     let account = this._accountRepository.selectById(executeRuleRequest.AccountId);
-    let isRulePass = account == null || (account != null && account.IsLocked == false);
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass);
+    let rulePassed = account == null || (account != null && account.IsLocked == false);
+
+    let response = this.handleRuleResult(executeRuleRequest, rule, rulePassed, 0);
     return response;
   }
 
@@ -105,9 +134,9 @@ module.exports = class RuleService {
    */
   executeDifferentEmailRule(executeRuleRequest) {
      let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
-     let isRulePass = executeRuleRequest.ExpectedEmail == executeRuleRequest.ActualEmail;
-     let ruleScore = !isRulePass ? rule.Score : 0;
-     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+     let rulePassed = executeRuleRequest.ExpectedEmail == executeRuleRequest.ActualEmail;
+     let ruleScore = !rulePassed ? rule.Score : 0;
+     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
      return response;
   }
 
@@ -128,9 +157,9 @@ module.exports = class RuleService {
 
      let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
 
-     let isRulePass = splunkSearchResponse.Count <= rule.ThresholdCount;
-     let ruleScore = !isRulePass ? rule.Score : 0;
-     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+     let rulePassed = splunkSearchResponse.Count <= rule.ThresholdCount;
+     let ruleScore = !rulePassed ? rule.Score : 0;
+     let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
      return response;
   }
 
@@ -156,9 +185,9 @@ module.exports = class RuleService {
 
     let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
 
-    let isRulePass = splunkSearchResponse.Count <= rule.ThresholdCount;
-    let ruleScore = !isRulePass ? rule.Score : 0;
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+    let rulePassed = splunkSearchResponse.Count <= rule.ThresholdCount;
+    let ruleScore = !rulePassed ? rule.Score : 0;
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
     return response;
   }
 
@@ -173,20 +202,20 @@ module.exports = class RuleService {
 
     let ruleScore = 0;
     for(let i = 0; i < rule.ChildRules.length; i++) {
-      if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.DIFFERENT_EMAIL) {
-        let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.ExpectedEmail, executeRuleRequest.ActualEmail);
+      if (rule.ChildRules[i].Type == Models.Rules.RuleType.DIFFERENT_EMAIL) {
+        let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.ExpectedEmail, executeRuleRequest.ActualEmail);
         let ruleResponse = this.executeDifferentEmailRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
-      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.SOURCE_IP) {
-        let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.SourceIp);
+      } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.SOURCE_IP) {
+        let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.SourceIp);
         let ruleResponse = this.executeSourceIpRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
-      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.ORDERS_CREATED) {
-        let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.AccountId, executeRuleRequest.OrderId);
+      } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.ORDERS_CREATED) {
+        let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.AccountId, executeRuleRequest.OrderId);
         let ruleResponse = this.executeOrdersCreatedInTimespanRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
-      } else if (rule.ChildRules[i].RuleType == Models.Rules.RuleType.REQUESTS_FROM_IP) {
-        let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(rule.ChildRules[i].RuleId, executeRuleRequest.SourceIp, executeRuleRequest.AccountId);
+      } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.REQUESTS_FROM_IP) {
+        let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.SourceIp, executeRuleRequest.AccountId);
         let ruleResponse = this.executeRequestsFromIpInTimespanRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
       } else {
@@ -194,8 +223,23 @@ module.exports = class RuleService {
       }
     }
 
-    let isRulePass = rule.Threshold >= ruleScore;
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, isRulePass, ruleScore);
+    let rulePassed = rule.Threshold >= ruleScore;
+    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
+    return response;
+  }
+
+  /**
+   * Performs the necessary actions based on the results of a rule.
+   * @name handleRuleResult
+   * @param {Models.Rules.ExecuteRuleRequest} executeRuleRequest - The rule execution request object.
+   * @returns {Models.Rules.ExecuteRuleResponse}
+   */
+  handleRuleResult(request, rule, rulePassed, ruleScore) {
+    if(!rulePassed && rule.EmailOnFail) {
+      // this._emailService.sendEmail(rule.EmailBody, rule.EmailSubject, rule.EmailTo);
+    }
+
+    let response = new Models.Rules.ExecuteRuleResponse(request.RuleId, rulePassed, ruleScore);
     return response;
   }
 };

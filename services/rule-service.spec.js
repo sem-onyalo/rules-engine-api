@@ -5,37 +5,51 @@ const expect = require('chai').expect;
 const sinon = require('sinon');
 
 const AccountService = require('./account-service');
+const EmailService = require('./cross-cutters/email-service');
 const Models = require('../models');
 const Repositories = require('../repositories');
 const RestApi = require('./rest-api');
 const RuleService = require('./rule-service');
 
 describe('RuleService', () => {
-  let ruleService;
   let accountService;
+  let emailService;
   let geolocationClient;
   let splunkClient;
   let accountRepository;
   let blockItemRepository;
   let ruleRepository;
+  let ruleSetRepository;
+  let ruleService;
 
   let accountServiceStub;
+  let emailServiceStub;
   let geolocationClientStub;
   let splunkClientStub;
   let accountRepositoryStub;
   let blockItemRepositoryStub;
   let ruleRepositoryStub;
+  let ruleSetRepositoryStub;
 
   beforeEach(function () {
     accountService = new AccountService();
+    emailService = new EmailService();
     geolocationClient = new RestApi.GeolocationClient();
     splunkClient = new RestApi.SplunkClient();
     accountRepository = new Repositories.AccountRepository();
     blockItemRepository = new Repositories.BlockItemRepository();
     ruleRepository = new Repositories.Rules.RuleRepository();
+    ruleSetRepository = new Repositories.Rules.RuleSetRepository();
 
-    ruleService = new RuleService(accountService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository);
+    emailServiceStub = sinon
+      .stub(emailService, 'sendEmail');
+
+    ruleService = new RuleService(accountService, emailService, geolocationClient, splunkClient, accountRepository, blockItemRepository, ruleRepository, ruleSetRepository);
   });
+
+  afterEach(function () {
+    emailServiceStub.restore();
+  })
 
   describe('executeRule(executeRuleRequest)', () => {
     it('should export function', () => {
@@ -209,6 +223,10 @@ describe('RuleService', () => {
     it('should run the account locked rule and return rule failed if account is locked', () => {
       let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = true;
       let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore, false));
 
       accountRepositoryStub = sinon
         .stub(accountRepository, 'selectById')
@@ -637,15 +655,15 @@ describe('RuleService', () => {
     it('should run the score threshold rule and return a combined rule score and rule failed if combined rule score > threshold', () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 2, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
       let childRules = [
-        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
-        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
-        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
-        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+        new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore, Models.Rules.RuleType.DIFFERENT_EMAIL),
+        new Models.Rules.Rule(sourceIpRuleId, sourceIpRuleScore, Models.Rules.RuleType.SOURCE_IP),
+        new Models.Rules.Rule(ordersCreatedRuleId, ordersCreatedRuleScore, Models.Rules.RuleType.ORDERS_CREATED),
+        new Models.Rules.Rule(requestsFromIpRuleId, requestsFromIpRuleScore, Models.Rules.RuleType.REQUESTS_FROM_IP)
       ];
       let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
       let splunkSearchCount = 1;
-      let differentEmailRuleScore = 1, sourceIpRuleScore = 2, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
       let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
       let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
       let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
@@ -694,15 +712,15 @@ describe('RuleService', () => {
     it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score == threshold', () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
       let childRules = [
-        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
-        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
-        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
-        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+        new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore, Models.Rules.RuleType.DIFFERENT_EMAIL),
+        new Models.Rules.Rule(sourceIpRuleId, sourceIpRuleScore, Models.Rules.RuleType.SOURCE_IP),
+        new Models.Rules.Rule(ordersCreatedRuleId, ordersCreatedRuleScore, Models.Rules.RuleType.ORDERS_CREATED),
+        new Models.Rules.Rule(requestsFromIpRuleId, requestsFromIpRuleScore, Models.Rules.RuleType.REQUESTS_FROM_IP)
       ];
       let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
       let splunkSearchCount = 1;
-      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
       let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
       let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
       let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
@@ -751,15 +769,15 @@ describe('RuleService', () => {
     it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score < threshold', () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
+      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 2, requestsFromIpRuleScore = 4;
       let childRules = [
-        { RuleType: Models.Rules.RuleType.DIFFERENT_EMAIL, RuleId: differentEmailRuleId },
-        { RuleType: Models.Rules.RuleType.SOURCE_IP, RuleId: sourceIpRuleId },
-        { RuleType: Models.Rules.RuleType.ORDERS_CREATED, RuleId: ordersCreatedRuleId },
-        { RuleType: Models.Rules.RuleType.REQUESTS_FROM_IP, RuleId: requestsFromIpRuleId }
+        new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore, Models.Rules.RuleType.DIFFERENT_EMAIL),
+        new Models.Rules.Rule(sourceIpRuleId, sourceIpRuleScore, Models.Rules.RuleType.SOURCE_IP),
+        new Models.Rules.Rule(ordersCreatedRuleId, ordersCreatedRuleScore, Models.Rules.RuleType.ORDERS_CREATED),
+        new Models.Rules.Rule(requestsFromIpRuleId, requestsFromIpRuleScore, Models.Rules.RuleType.REQUESTS_FROM_IP)
       ];
       let sourceIp = '127.0.0.1', email = 'jdoe@nomail.com', expectedEmail = 'john.doe@nomail.com';
       let splunkSearchCount = 1;
-      let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 2, requestsFromIpRuleScore = 4;
       let ordersCreatedRuleThresholdCount = 0, ordersCreatedRuleThresholdMin = 180;
       let requestsFromIpRuleThresholdCount = 0, requestsFromIpRuleThresholdMin = 180, accountCountThreshold = 2;
       let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleId, orderId, accountId, expectedEmail, email, sourceIp);
@@ -804,5 +822,103 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
       assert.strictEqual(ruleResponse.RuleScore, 8, 'Rule score was not expected value');
     });
+
+    // it('should send an email if the rule fails and the EmailOnFail flag is set', () => {
+    //   let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
+    //   let accountLockedRuleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(1, 987);
+    //
+    //   ruleRepositoryStub = sinon
+    //     .stub(ruleRepository, 'selectById')
+    //     .returns(new Models.Rules.Rule(1, 0, true, emailTo, emailSubject, emailBody));
+    //
+    //   accountRepositoryStub = sinon
+    //     .stub(accountRepository, 'selectById')
+    //     .returns(new Models.Account(987, true));
+    //
+    //   let data = [accountLockedRuleRequest];
+    //   for (let i = 0; i < data.length; i++) {
+    //     ruleService.executeRule(data[i]);
+    //     sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
+    //   }
+    // });
+  });
+
+  describe('executeRuleSet(executeRuleSetRequest)', () => {
+    let ruleSetId = 1, orderId = 2, accountId = 3, sourceIp = '127.0.0.1';
+    let expectedEmail = 'jdoe@nomail.com', actualEmail = 'jdoe@nomail.com';
+    let accountLockedRuleId = 1, emailBlocklistRuleId = 2, scoreThresholdRuleId = 3;
+    let ruleSetRequest = new Models.Rules.ExecuteRuleSetRequest(ruleSetId, orderId, accountId, expectedEmail, actualEmail, sourceIp);
+
+    it('should export function', () => {
+      expect(ruleService.executeRuleSet).to.be.a('function');
+    });
+
+    it('should run all rules in a rule set', () => {
+      let accountLockedRuleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(accountLockedRuleId, accountId);
+      let emailBlocklistRuleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(emailBlocklistRuleId, actualEmail);
+      let scoreThresholdRuleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(scoreThresholdRuleId, orderId, accountId, expectedEmail, actualEmail, sourceIp);
+
+      let getRuleSetStub = sinon
+        .stub(ruleSetRepository, 'selectById')
+        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+          new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
+          new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
+          new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
+        ], false));
+
+      let executeAccountLockedRuleStub = sinon
+        .stub(ruleService, 'executeAccountLockedRule');
+
+      let executeEmailBlocklistRuleStub = sinon
+        .stub(ruleService, 'executeEmailBlocklistRule');
+
+      let executeScoreThresholdRuleStub = sinon
+        .stub(ruleService, 'executeScoreThresholdRule');
+
+      ruleService.executeRuleSet(ruleSetRequest);
+
+      getRuleSetStub.restore();
+      executeAccountLockedRuleStub.restore();
+      executeEmailBlocklistRuleStub.restore();
+      executeScoreThresholdRuleStub.restore();
+      sinon.assert.calledWith(getRuleSetStub, ruleSetId);
+      sinon.assert.calledWith(executeAccountLockedRuleStub, accountLockedRuleRequest);
+      sinon.assert.calledWith(executeEmailBlocklistRuleStub, emailBlocklistRuleRequest);
+      sinon.assert.calledWith(executeScoreThresholdRuleStub, scoreThresholdRuleRequest);
+    });
+
+    // it('should send an email if a rule fails and the flag is set', () => {
+    //   let getRuleSetStub = sinon
+    //     .stub(ruleRepository, 'selectById')
+    //     .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+    //       new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED, false),
+    //       new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, true)
+    //     ], false));
+    //
+    //   let executeAccountLockedRuleStub = sinon
+    //     .stub(ruleService, 'executeAccountLockedRule')
+    //     .returns(null);
+    //
+    //   let executeEmailBlocklistRuleStub = sinon
+    //     .stub(ruleService, 'executeEmailBlocklistRule')
+    //     .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 10));
+    //
+    //   emailServiceStub = sinon
+    //     .stub(emailService, 'sendEmail');
+    //
+    //   ruleService.executeRuleSet(ruleSetRequest);
+    //
+    //   getRuleSetStub.restore();
+    //   emailServiceStub.restore();
+    //   executeAccountLockedRuleStub.restore();
+    //   executeEmailBlocklistRuleStub.restore();
+    //
+    //   sinon.assert.callOrder(
+    //     getRuleSetStub,
+    //     executeAccountLockedRuleStub,
+    //     executeEmailBlocklistRuleStub,
+    //     emailServiceStub
+    //   );
+    // });
   });
 });
