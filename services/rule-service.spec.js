@@ -186,6 +186,10 @@ describe('RuleService', () => {
       let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
 
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false));
+
       blockItemRepositoryStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
         .returns(null);
@@ -205,6 +209,10 @@ describe('RuleService', () => {
       let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
 
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false));
+
       blockItemRepositoryStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
         .returns(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com'));
@@ -218,6 +226,23 @@ describe('RuleService', () => {
 
       assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
+    });
+
+    it('should run the email blocklist rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+      let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, true, emailTo, emailSubject, emailBody));
+
+      blockItemRepositoryStub = sinon
+        .stub(blockItemRepository, 'selectByTypeAndValue')
+        .returns(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com'));
+
+      ruleService.executeRule(new Models.Rules.ExecuteEmailBlocklistRuleRequest(1, 'jdoe@nomail.com'));
+
+      ruleRepositoryStub.restore();
+      sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
     });
 
     it('should run the account locked rule and return rule failed if account is locked', () => {
@@ -247,6 +272,10 @@ describe('RuleService', () => {
       let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = false;
       let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
 
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(ruleId, ruleScore, false));
+
       accountRepositoryStub = sinon
         .stub(accountRepository, 'selectById')
         .returns(new Models.Account(accountId, isAccountLocked));
@@ -260,6 +289,23 @@ describe('RuleService', () => {
 
       assert.isDefined(ruleResponse, 'function should return an ExecuteRuleResponse object');
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
+    });
+
+    it('should run the account locked rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+      let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
+
+      ruleRepositoryStub = sinon
+        .stub(ruleRepository, 'selectById')
+        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.ACCOUNT_LOCKED, true, emailTo, emailSubject, emailBody));
+
+      accountRepositoryStub = sinon
+        .stub(accountRepository, 'selectById')
+        .returns(new Models.Account(987, true));
+
+      ruleService.executeRule(new Models.Rules.ExecuteAccountLockedRuleRequest(1, 987));
+
+      ruleRepositoryStub.restore();
+      sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
     });
 
     it('should run the different email rule and return rule failed if emails are different', () => {
@@ -671,19 +717,24 @@ describe('RuleService', () => {
       ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
 
       ruleRepositoryStub
-        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+        .withArgs(ruleId)
+        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
 
       ruleRepositoryStub
-        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .withArgs(differentEmailRuleId)
+        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
 
       ruleRepositoryStub
-        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .withArgs(sourceIpRuleId)
+        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
 
       ruleRepositoryStub
-        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .withArgs(ordersCreatedRuleId)
+        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
 
       ruleRepositoryStub
-        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .withArgs(requestsFromIpRuleId)
+        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
@@ -728,19 +779,24 @@ describe('RuleService', () => {
       ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
 
       ruleRepositoryStub
-        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+        .withArgs(ruleId)
+        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
 
       ruleRepositoryStub
-        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .withArgs(differentEmailRuleId)
+        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
 
       ruleRepositoryStub
-        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .withArgs(sourceIpRuleId)
+        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
 
       ruleRepositoryStub
-        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .withArgs(ordersCreatedRuleId)
+        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
 
       ruleRepositoryStub
-        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .withArgs(requestsFromIpRuleId)
+        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
@@ -785,19 +841,24 @@ describe('RuleService', () => {
       ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
 
       ruleRepositoryStub
-        .withArgs(ruleId).returns(new Models.Rules.RuleScoreThreshold(ruleId, scoreThreshold, childRules));
+        .withArgs(ruleId)
+        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
 
       ruleRepositoryStub
-        .withArgs(differentEmailRuleId).returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .withArgs(differentEmailRuleId)
+        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
 
       ruleRepositoryStub
-        .withArgs(sourceIpRuleId).returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .withArgs(sourceIpRuleId)
+        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
 
       ruleRepositoryStub
-        .withArgs(ordersCreatedRuleId).returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .withArgs(ordersCreatedRuleId)
+        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
 
       ruleRepositoryStub
-        .withArgs(requestsFromIpRuleId).returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .withArgs(requestsFromIpRuleId)
+        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
@@ -823,24 +884,26 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 8, 'Rule score was not expected value');
     });
 
-    // it('should send an email if the rule fails and the EmailOnFail flag is set', () => {
-    //   let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
-    //   let accountLockedRuleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(1, 987);
-    //
-    //   ruleRepositoryStub = sinon
-    //     .stub(ruleRepository, 'selectById')
-    //     .returns(new Models.Rules.Rule(1, 0, true, emailTo, emailSubject, emailBody));
-    //
-    //   accountRepositoryStub = sinon
-    //     .stub(accountRepository, 'selectById')
-    //     .returns(new Models.Account(987, true));
-    //
-    //   let data = [accountLockedRuleRequest];
-    //   for (let i = 0; i < data.length; i++) {
-    //     ruleService.executeRule(data[i]);
-    //     sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
-    //   }
-    // });
+    it('should run the score threshold rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+      let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
+
+      ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
+
+      ruleRepositoryStub
+        .withArgs(1)
+        .returns(new Models.Rules.RuleScoreThreshold(1, Models.Rules.RuleType.SCORE_THRESHOLD, 0, 5, [
+          new Models.Rules.Rule(2, 10, Models.Rules.RuleType.DIFFERENT_EMAIL)
+        ], true, emailTo, emailSubject, emailBody));
+
+      ruleRepositoryStub
+        .withArgs(2)
+        .returns(new Models.Rules.Rule(2, 10));
+
+      ruleService.executeRule(new Models.Rules.ExecuteScoreThresholdRuleRequest(1, null, null, 'john.doe@nomail.com', 'jdoe@nomail.com', null));
+
+      ruleRepositoryStub.restore();
+      sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
+    });
   });
 
   describe('executeRuleSet(executeRuleSetRequest)', () => {
@@ -886,39 +949,5 @@ describe('RuleService', () => {
       sinon.assert.calledWith(executeEmailBlocklistRuleStub, emailBlocklistRuleRequest);
       sinon.assert.calledWith(executeScoreThresholdRuleStub, scoreThresholdRuleRequest);
     });
-
-    // it('should send an email if a rule fails and the flag is set', () => {
-    //   let getRuleSetStub = sinon
-    //     .stub(ruleRepository, 'selectById')
-    //     .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
-    //       new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED, false),
-    //       new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, true)
-    //     ], false));
-    //
-    //   let executeAccountLockedRuleStub = sinon
-    //     .stub(ruleService, 'executeAccountLockedRule')
-    //     .returns(null);
-    //
-    //   let executeEmailBlocklistRuleStub = sinon
-    //     .stub(ruleService, 'executeEmailBlocklistRule')
-    //     .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 10));
-    //
-    //   emailServiceStub = sinon
-    //     .stub(emailService, 'sendEmail');
-    //
-    //   ruleService.executeRuleSet(ruleSetRequest);
-    //
-    //   getRuleSetStub.restore();
-    //   emailServiceStub.restore();
-    //   executeAccountLockedRuleStub.restore();
-    //   executeEmailBlocklistRuleStub.restore();
-    //
-    //   sinon.assert.callOrder(
-    //     getRuleSetStub,
-    //     executeAccountLockedRuleStub,
-    //     executeEmailBlocklistRuleStub,
-    //     emailServiceStub
-    //   );
-    // });
   });
 });

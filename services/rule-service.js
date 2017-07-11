@@ -105,9 +105,11 @@ module.exports = class RuleService {
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
   executeEmailBlocklistRule(executeRuleRequest) {
+    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
     let blockItem = this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, executeRuleRequest.Email);
     let rulePassed = blockItem == null;
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed);
+
+    let response = this.handleRuleResult(rule, rulePassed, 0);
     return response;
   }
 
@@ -122,7 +124,7 @@ module.exports = class RuleService {
     let account = this._accountRepository.selectById(executeRuleRequest.AccountId);
     let rulePassed = account == null || (account != null && account.IsLocked == false);
 
-    let response = this.handleRuleResult(executeRuleRequest, rule, rulePassed, 0);
+    let response = this.handleRuleResult(rule, rulePassed, 0);
     return response;
   }
 
@@ -224,22 +226,24 @@ module.exports = class RuleService {
     }
 
     let rulePassed = rule.Threshold >= ruleScore;
-    let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
+    let response = this.handleRuleResult(rule, rulePassed, ruleScore);
     return response;
   }
 
   /**
    * Performs the necessary actions based on the results of a rule.
    * @name handleRuleResult
-   * @param {Models.Rules.ExecuteRuleRequest} executeRuleRequest - The rule execution request object.
+   * @param {Models.Rules.Rule} rule - The rule object.
+   * @param {bool} rulePassed - Whether or not the rule passed.
+   * @param {float} ruleScore - The rule score.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  handleRuleResult(request, rule, rulePassed, ruleScore) {
+  handleRuleResult(rule, rulePassed, ruleScore) {
     if(!rulePassed && rule.EmailOnFail) {
-      // this._emailService.sendEmail(rule.EmailBody, rule.EmailSubject, rule.EmailTo);
+      this._emailService.sendEmail(rule.EmailBody, rule.EmailSubject, rule.EmailTo);
     }
 
-    let response = new Models.Rules.ExecuteRuleResponse(request.RuleId, rulePassed, ruleScore);
+    let response = new Models.Rules.ExecuteRuleResponse(rule.Id, rulePassed, ruleScore);
     return response;
   }
 };
