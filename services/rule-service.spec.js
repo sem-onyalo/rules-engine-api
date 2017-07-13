@@ -929,14 +929,17 @@ describe('RuleService', () => {
           new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
         ], false));
 
-      let executeAccountLockedRuleStub = sinon
-        .stub(ruleService, 'executeAccountLockedRule');
+        let executeAccountLockedRuleStub = sinon
+          .stub(ruleService, 'executeAccountLockedRule')
+          .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
 
-      let executeEmailBlocklistRuleStub = sinon
-        .stub(ruleService, 'executeEmailBlocklistRule');
+        let executeEmailBlocklistRuleStub = sinon
+          .stub(ruleService, 'executeEmailBlocklistRule')
+          .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5));
 
-      let executeScoreThresholdRuleStub = sinon
-        .stub(ruleService, 'executeScoreThresholdRule');
+        let executeScoreThresholdRuleStub = sinon
+          .stub(ruleService, 'executeScoreThresholdRule')
+          .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
 
       ruleService.executeRuleSet(ruleSetRequest);
 
@@ -948,6 +951,105 @@ describe('RuleService', () => {
       sinon.assert.calledWith(executeAccountLockedRuleStub, accountLockedRuleRequest);
       sinon.assert.calledWith(executeEmailBlocklistRuleStub, emailBlocklistRuleRequest);
       sinon.assert.calledWith(executeScoreThresholdRuleStub, scoreThresholdRuleRequest);
+    });
+
+    it('should return rule set passed if all rules passed', () => {
+      let getRuleSetStub = sinon
+        .stub(ruleSetRepository, 'selectById')
+        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+          new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
+          new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
+          new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
+        ], false));
+
+      let executeAccountLockedRuleStub = sinon
+        .stub(ruleService, 'executeAccountLockedRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+
+      let executeEmailBlocklistRuleStub = sinon
+        .stub(ruleService, 'executeEmailBlocklistRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5));
+
+      let executeScoreThresholdRuleStub = sinon
+        .stub(ruleService, 'executeScoreThresholdRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+
+      let response = ruleService.executeRuleSet(ruleSetRequest);
+
+      assert.isDefined(response, 'Execute rule set should return a response');
+      assert.strictEqual(response.RulePassed, true, 'Rule set should pass');
+    });
+
+    it('should return rule set failed if one out of x rules fails', () => {
+      let getRuleSetStub = sinon
+        .stub(ruleSetRepository, 'selectById')
+        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+          new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
+          new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
+          new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
+        ], false));
+
+      let executeAccountLockedRuleStub = sinon
+        .stub(ruleService, 'executeAccountLockedRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+
+      let executeEmailBlocklistRuleStub = sinon
+        .stub(ruleService, 'executeEmailBlocklistRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5));
+
+      let executeScoreThresholdRuleStub = sinon
+        .stub(ruleService, 'executeScoreThresholdRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+
+      let response = ruleService.executeRuleSet(ruleSetRequest);
+
+      assert.isDefined(response, 'Execute rule set should return a response');
+      assert.strictEqual(response.RulePassed, false, 'Rule set should not pass');
+    });
+
+    it('should stop processing rules if rule fails and flag is set', () => {
+      let getRuleSetStub = sinon
+        .stub(ruleSetRepository, 'selectById')
+        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+          new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
+          new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
+          new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
+        ], true));
+
+      let executeAccountLockedRuleStub = sinon
+        .stub(ruleService, 'executeAccountLockedRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+
+      let executeEmailBlocklistRuleStub = sinon
+        .stub(ruleService, 'executeEmailBlocklistRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5));
+
+      let executeScoreThresholdRuleStub = sinon
+        .stub(ruleService, 'executeScoreThresholdRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+
+      let response = ruleService.executeRuleSet(ruleSetRequest);
+
+      assert.isDefined(response, 'Execute rule set should return a response');
+      assert.strictEqual(response.RulePassed, false, 'Rule set should not pass');
+      sinon.assert.notCalled(executeScoreThresholdRuleStub);
+    });
+
+    it('should throw an exception if there is an unsupported rule in the rule set', () => {
+      let getRuleSetStub = sinon
+        .stub(ruleSetRepository, 'selectById')
+        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+          new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
+          new Models.Rules.Rule(emailBlocklistRuleId, 0, 9999)
+        ], true));
+
+      let executeAccountLockedRuleStub = sinon
+        .stub(ruleService, 'executeAccountLockedRule')
+        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+
+      let executeRuleSetFn = function () { ruleService.executeRuleSet(ruleSetRequest); };
+
+      expect(executeRuleSetFn).to.throw('Unsupported rule type in rule set');
     });
   });
 });

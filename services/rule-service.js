@@ -33,20 +33,29 @@ module.exports = class RuleService {
    * @returns {Models.Rules.ExecuteRuleSetResponse}
    */
   executeRuleSet(executeRuleSetRequest) {
+    let rulePassed = true;
+    let executeRuleSetMessage = '';
     let ruleSet = this._ruleSetRepository.selectById(executeRuleSetRequest.RuleSetId);
-
     for (let i = 0; i < ruleSet.Rules.length; i++) {
+      let ruleResponse;
       if (ruleSet.Rules[i].Type == Models.Rules.RuleType.ACCOUNT_LOCKED) {
         let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.AccountId);
-        let ruleResponse = this.executeAccountLockedRule(ruleRequest);
+        ruleResponse = this.executeAccountLockedRule(ruleRequest);
       } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.EMAIL_BLOCKLIST) {
         let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.ActualEmail);
-        let ruleResponse = this.executeEmailBlocklistRule(ruleRequest);
+        ruleResponse = this.executeEmailBlocklistRule(ruleRequest);
       } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.SCORE_THRESHOLD) {
         let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.OrderId, executeRuleSetRequest.AccountId, executeRuleSetRequest.ExpectedEmail, executeRuleSetRequest.ActualEmail, executeRuleSetRequest.SourceIp);
-        let ruleResponse = this.executeScoreThresholdRule(ruleRequest);
+        ruleResponse = this.executeScoreThresholdRule(ruleRequest);
+      } else {
+        throw 'Unsupported rule type in rule set';
       }
+
+      rulePassed = rulePassed && ruleResponse.IsRulePass;
+      if (!rulePassed && ruleSet.StopProcessingOnFail) break;
     }
+
+    return new Models.Rules.ExecuteRuleSetResponse(rulePassed);
   }
 
   /**
