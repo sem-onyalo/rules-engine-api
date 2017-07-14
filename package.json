@@ -20,6 +20,7 @@
     "express": "^4.15.3",
     "node-ioc": "^2.1.0",
     "nodemailer": "^4.0.1",
+    "oracledb": "^1.13.1",
     "sprintf-js": "^1.1.1"
   }
 }
