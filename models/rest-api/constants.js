@@ -4,6 +4,7 @@ const GET = 'GET';
 const POST = 'POST';
 
 const JSON = 'application/json';
+const FORM = 'application/x-www-form-urlencoded';
 
 module.exports = {
   RequestMethod: {
@@ -11,6 +12,7 @@ module.exports = {
       POST
   },
   ContentType: {
-    JSON
+    JSON,
+    FORM
   }
 }
