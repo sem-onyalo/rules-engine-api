@@ -56,5 +56,14 @@ describe('AccountService', () => {
       sinon.assert.calledOnce(selectAccountByIdStub);
       assert.strictEqual(actual, isLocked, 'AccountService.IsAccountLocked() does not strictly equal true');
     });
+
+    it('should return false if account does not exist in repository', () => {
+      let selectAccountByIdStub = sinon
+        .stub(accountRepository, 'selectById')
+        .returns(null);
+
+      let actual = accountService.isAccountLocked(123);
+      assert.strictEqual(actual, false, 'Should return false if account does not exist in repository');
+    });
   });
 });

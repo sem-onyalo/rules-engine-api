@@ -7,6 +7,6 @@ module.exports = class AccountService {
 
   isAccountLocked(accountId) {
     let account = this._accountRepository.selectById(accountId);
-    return account.IsLocked;
+    return account !== null ? account.IsLocked : false;
   }
 };
