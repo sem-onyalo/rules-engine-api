@@ -9,7 +9,9 @@ const Services = require('../services');
 
 var _defaultContainer = new IocContainer();
 
-_defaultContainer.registerWithTypes().as(Repositories.AccountRepository);
+_defaultContainer.registerWithTypes().as(Repositories.DbContext).singleton();
+
+_defaultContainer.registerWithTypes(Repositories.DbContext).as(Repositories.AccountRepository);
 _defaultContainer.registerWithTypes().as(Repositories.BlockItemRepository);
 _defaultContainer.registerWithTypes().as(Repositories.Rules.RuleRepository);
 _defaultContainer.registerWithTypes().as(Repositories.Rules.RuleSetRepository);

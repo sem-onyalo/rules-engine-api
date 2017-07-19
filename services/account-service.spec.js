@@ -4,9 +4,11 @@ const Models = require('../models');
 const Repositories = require('../repositories');
 const AccountService = require('./account-service');
 
-const assert = require('chai').assert;
-const expect = require('chai').expect;
+const chai = require('chai');
 const sinon = require('sinon');
+const assert = chai.assert;
+const expect = chai.expect;
+chai.use(require('chai-as-promised'));
 
 describe('AccountService', () => {
   let accountRepository;
@@ -32,14 +34,12 @@ describe('AccountService', () => {
 
       let selectAccountByIdStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(new Models.Account(123, isLocked));
+        .returns(Promise.resolve(new Models.Account(123, isLocked)));
 
       let actual = accountService.isAccountLocked();
 
-      selectAccountByIdStub.restore();
-
       sinon.assert.calledOnce(selectAccountByIdStub);
-      assert.strictEqual(actual, isLocked, 'AccountService.IsAccountLocked() does not strictly equal false');
+      return expect(actual).to.eventually.equal(isLocked);
     });
 
     it('should get account from repostitory and return true', () => {
@@ -47,23 +47,21 @@ describe('AccountService', () => {
 
       let selectAccountByIdStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(new Models.Account(123, isLocked));
+        .returns(Promise.resolve(new Models.Account(123, isLocked)));
 
       let actual = accountService.isAccountLocked();
 
-      selectAccountByIdStub.restore();
-
       sinon.assert.calledOnce(selectAccountByIdStub);
-      assert.strictEqual(actual, isLocked, 'AccountService.IsAccountLocked() does not strictly equal true');
+      return expect(actual).to.eventually.equal(isLocked);
     });
 
     it('should return false if account does not exist in repository', () => {
       let selectAccountByIdStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(null);
+        .returns(Promise.resolve(null));
 
       let actual = accountService.isAccountLocked(123);
-      assert.strictEqual(actual, false, 'Should return false if account does not exist in repository');
+      return expect(actual).to.eventually.equal(false);
     });
   });
 });

@@ -69,9 +69,15 @@ describe('DependencyFactory', () => {
       assert.strictEqual(result.getInfo(), 'royal gala, orange, bartlett');
     });
 
+    it('should resolve DbContext', () => {
+      let instance = DependencyFactory.resolve(Repositories.DbContext);
+      expect(instance).to.be.an.instanceof(Repositories.DbContext);
+    });
+
     it('should resolve AccountRepository', () => {
       let instance = DependencyFactory.resolve(Repositories.AccountRepository);
       expect(instance).to.be.an.instanceof(Repositories.AccountRepository);
+      expect(instance._dbContext).to.be.an.instanceof(Repositories.DbContext);
     });
 
     it('should resolve BlockItemRepository', () => {

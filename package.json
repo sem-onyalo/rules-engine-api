@@ -11,16 +11,17 @@
   "license": "ISC",
   "devDependencies": {
     "chai": "^4.0.2",
+    "chai-as-promised": "^7.1.1",
     "mocha": "^3.4.2",
     "nodemon": "^1.11.0",
     "sinon": "^2.3.4"
   },
   "dependencies": {
-    "body-parser": "^1.17.2",
-    "express": "^4.15.3",
-    "node-ioc": "^2.1.0",
-    "nodemailer": "^4.0.1",
-    "oracledb": "^1.13.1",
-    "sprintf-js": "^1.1.1"
+    "body-parser": "1.17.2",
+    "express": "4.15.3",
+    "node-ioc": "2.1.0",
+    "nodemailer": "4.0.1",
+    "oracledb": "1.13.1",
+    "sprintf-js": "1.1.1"
   }
 }

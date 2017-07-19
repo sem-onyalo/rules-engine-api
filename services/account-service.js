@@ -5,8 +5,8 @@ module.exports = class AccountService {
     this._accountRepository = accountRepository;
   }
 
-  isAccountLocked(accountId) {
-    let account = this._accountRepository.selectById(accountId);
+  async isAccountLocked(accountId) {
+    let account = await this._accountRepository.selectById(accountId);
     return account !== null ? account.IsLocked : false;
   }
 };
