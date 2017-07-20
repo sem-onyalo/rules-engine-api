@@ -10,7 +10,11 @@ module.exports = class DbContext {
   async ping() {
     let conn = await this.openConn();
     let status = conn !== null;
-    if (conn !== null) await this.closeConn(conn);
+    if (conn !== null) {
+      let result = await conn.execute("select 'ping' from dual", []);
+      status = result.rows[0] == 'ping';
+      await this.closeConn(conn);
+    }
     return status;
   }
 

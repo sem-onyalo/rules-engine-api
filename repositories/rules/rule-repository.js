@@ -1,9 +1,11 @@
 "use strict";
 
 module.exports = class RuleRepository {
-  constructor() { }
+  constructor(dbContext) {
+    this._dbContext = dbContext;
+  }
 
   selectById(id) {
-
+    
   }
 }

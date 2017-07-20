@@ -83,16 +83,19 @@ describe('DependencyFactory', () => {
     it('should resolve BlockItemRepository', () => {
       let instance = DependencyFactory.resolve(Repositories.BlockItemRepository);
       expect(instance).to.be.an.instanceof(Repositories.BlockItemRepository);
+      expect(instance._dbContext).to.be.an.instanceof(Repositories.DbContext);
     });
 
     it('should resolve RuleRepository', () => {
       let instance = DependencyFactory.resolve(Repositories.Rules.RuleRepository);
       expect(instance).to.be.an.instanceof(Repositories.Rules.RuleRepository);
+      expect(instance._dbContext).to.be.an.instanceof(Repositories.DbContext);
     });
 
     it('should resolve RuleSetRepository', () => {
       let instance = DependencyFactory.resolve(Repositories.Rules.RuleSetRepository);
       expect(instance).to.be.an.instanceof(Repositories.Rules.RuleSetRepository);
+      expect(instance._dbContext).to.be.an.instanceof(Repositories.DbContext);
     });
 
     it('should resolve GeolocationClient', () => {

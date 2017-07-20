@@ -1,11 +1,11 @@
 "use strict";
 
 module.exports = class RuleSetRepository {
-  constructor() {
-
+  constructor(dbContext) {
+    this._dbContext = dbContext;
   }
 
   selectById(id) {
-    
+
   }
 }
