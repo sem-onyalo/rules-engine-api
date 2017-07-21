@@ -15,9 +15,9 @@ module.exports = class BlockItemRepository {
     let blockItem = null;
     if (result != null && result.rows.length > 0) {
       blockItem = new Models.BlockItem();
-      blockItem.Id = result.rows[0][0];
-      blockItem.Type = result.rows[0][1];
-      blockItem.Value = result.rows[0][2];
+      blockItem.Id = this._dbContext.getValueFromResultSet(result, 'ID');
+      blockItem.Type = this._dbContext.getValueFromResultSet(result, 'TYPE_ID');
+      blockItem.Value = this._dbContext.getValueFromResultSet(result, 'VALUE');
     }
 
     return blockItem;

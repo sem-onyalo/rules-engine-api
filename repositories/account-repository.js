@@ -15,8 +15,8 @@ module.exports = class AccountRepository {
     let account = null;
     if (result != null && result.rows.length > 0) {
       account = new Models.Account();
-      account.Id = result.rows[0][0];
-      account.IsLocked = result.rows[0][1] == 1;
+      account.Id = this._dbContext.getValueFromResultSet(result, 'COLLECTOR_NUM');
+      account.IsLocked = this._dbContext.getValueFromResultSet(result, 'LOCK_STATUS') == 1;
     }
 
     return account;

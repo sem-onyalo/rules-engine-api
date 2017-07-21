@@ -45,4 +45,17 @@ module.exports = class DbContext {
       console.error(ex);
     }
   }
+
+  getValueFromResultSet(resultSet, columnName, rowIndex = 0) {
+    let index = findIndexByAttr(resultSet.metaData, 'name', columnName);
+    return resultSet.rows[rowIndex][index];
+  }
+}
+
+function findIndexByAttr(array, attr, value) {
+  for (let i = 0; i < array.length; i++) {
+    if (array[i][attr] === value) return i;
+  }
+
+  return -1;
 }
