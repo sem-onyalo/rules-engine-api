@@ -24,6 +24,11 @@ describe('SplunkConfig', () => {
       expect(SplunkConfig.Keys.API_SEARCH_URI).to.be.a('string');
       assert.strictEqual(SplunkConfig.Keys.API_SEARCH_URI, 'API_SEARCH_URI', 'API_SEARCH_URI key not expected value');
     });
+
+    it('should define a key API_LOGIN_PATH with value "API_LOGIN_PATH"', () => {
+      expect(SplunkConfig.Keys.API_LOGIN_PATH).to.be.a('string');
+      assert.strictEqual(SplunkConfig.Keys.API_LOGIN_PATH, 'API_LOGIN_PATH', 'API_LOGIN_PATH key not expected value');
+    });
   });
 
   describe('SearchQueries', () => {

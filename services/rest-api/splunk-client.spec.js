@@ -5,14 +5,17 @@ const ConfigService = require('../cross-cutters/config-service');
 const RestApiClient = require('./rest-api-client');
 const SplunkClient = require('./splunk-client');
 
-const assert = require('chai').assert;
-const expect = require('chai').expect;
+const chai = require('chai');
 const sinon = require('sinon');
+const assert = chai.assert;
+const expect = chai.expect;
+chai.use(require('chai-as-promised'));
 
 describe('SplunkClient', () => {
   const testSplunkApiUri = 'https://test-lo.splunk.com';
   const testSplunkApiSearchUri = '/search';
   const testSplunkApiAuthHeader = 'APIKEY 123';
+  const testSplunkApiLoginPath = '/search/auth/login';
 
   let configServiceStub;
   let configService;
@@ -39,6 +42,10 @@ describe('SplunkClient', () => {
     configServiceStub
       .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_URI)
       .returns(testSplunkApiSearchUri);
+
+    configServiceStub
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_LOGIN_PATH)
+      .returns(testSplunkApiLoginPath);
   });
 
   afterEach(function () {
@@ -93,6 +100,60 @@ describe('SplunkClient', () => {
 
       sinon.assert.calledOnce(postJsonRequestStub);
       sinon.assert.calledWith(postJsonRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+    });
+  });
+
+  describe('login(loginRequest)', () => {
+    let uri = testSplunkApiUri + testSplunkApiLoginPath;
+    let auth = '';
+
+    let loginFailedResponse = '<?xml version="1.0" encoding="UTF-8"?>'
+      + '<response>'
+      + '  <messages>'
+      + '    <msg type="WARN">Login failed</msg>'
+      + '  </messages>'
+      + '</response>';
+
+    let loginSuccessResponse = '<response>'
+      + '  <sessionKey>a1b2c3</sessionKey>'
+      + '</response>';
+
+    it('should export function', () => {
+      expect(splunkClient.login).to.be.a('function');
+    });
+
+    it('should call RestApiClient.postXmlRequest', async () => {
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest');
+      postXmlRequestStub.returns(Promise.resolve(loginFailedResponse));
+
+      let response = await splunkClient.login({ username: 'pablo', password: 'escobar' });
+      postXmlRequestStub.restore();
+
+      sinon.assert.calledWith(postXmlRequestStub, uri, auth, [['username', 'pablo'], ['password', 'escobar']]);
+    });
+
+    it('should return null session key if login fails', async () => {
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest');
+      postXmlRequestStub.returns(Promise.resolve(loginFailedResponse));
+
+      let response = await splunkClient.login({ username: 'pablo', password: 'escobar' });
+      postXmlRequestStub.restore();
+
+      let expectedResponse = { sessionKey: null };
+      assert.isDefined(response, 'The login function should return a response');
+      assert.strictEqual(response.sessionKey, null, 'The login response should have a session key property of value null');
+    });
+
+    it('should return valid session key if login succeeds', async () => {
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest');
+      postXmlRequestStub.returns(Promise.resolve(loginSuccessResponse));
+
+      let response = await splunkClient.login({ username: 'pablo', password: 'escobar' });
+      postXmlRequestStub.restore();
+
+      let expectedResponse = { sessionKey: 'a1b2c3' };
+      assert.isDefined(response, 'The login function should return a response');
+      assert.strictEqual(response.sessionKey, 'a1b2c3', 'The login response session key property value was not expected');
     });
   });
 });
