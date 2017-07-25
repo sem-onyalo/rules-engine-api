@@ -8,8 +8,9 @@ const expect = require('chai').expect;
 const sinon = require('sinon');
 
 describe('RestApiClient', () => {
-  const host = 'http://dev.loyalty.com';
-  const path = '/some-path';
+  // const host = 'http://dev.loyalty.com';
+  // const path = '/some-path';
+  const uri = 'http://dev.loyalty.com/some-path';
   const authHeader = 'APIKEY 123456';
   const jsonContent = '{ "FirstName": "Joe" }';
   const jsonContentType = Models.RestApi.Constants.ContentType.JSON;
@@ -25,13 +26,13 @@ describe('RestApiClient', () => {
     assert.isNotNull(restApiClient, 'RestApiClient instance is null');
   });
 
-  describe('request(method, host, path, auth, contentType = null, content = null)', () => {
+  describe('request(uri, method, auth, contentType = null, content = null)', () => {
     it('should export function', () => {
       expect(restApiClient.request).to.be.a('function');
     });
   });
 
-  describe('getRequest(host, path, auth)', () => {
+  describe('getRequest(uri, auth)', () => {
     it('should export function', () => {
       expect(restApiClient.getRequest).to.be.a('function');
     });
@@ -40,16 +41,16 @@ describe('RestApiClient', () => {
       let requestStub = sinon
         .stub(restApiClient, 'request');
 
-      restApiClient.getRequest(host, path, authHeader);
+      restApiClient.getRequest(uri, authHeader);
 
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, 'GET', host, path, authHeader);
+      sinon.assert.calledWith(requestStub, uri, 'GET', authHeader);
     });
   });
 
-  describe('postRequest(host, path, auth, contentType, content)', () => {
+  describe('postRequest(uri, auth, contentType, content)', () => {
     it('should export function', () => {
       expect(restApiClient.postRequest).to.be.a('function');
     });
@@ -58,16 +59,16 @@ describe('RestApiClient', () => {
       let requestStub = sinon
         .stub(restApiClient, 'request');
 
-      restApiClient.postRequest(host, path, authHeader, jsonContentType, jsonContent);
+      restApiClient.postRequest(uri, authHeader, jsonContentType, jsonContent);
 
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, 'POST', host, path, authHeader, jsonContentType, jsonContent);
+      sinon.assert.calledWith(requestStub, uri, 'POST', authHeader, jsonContentType, jsonContent);
     });
   });
 
-  describe('postJsonRequest(host, path, auth, content)', () => {
+  describe('postJsonRequest(uri, auth, content)', () => {
     it('should export function', () => {
       expect(restApiClient.postJsonRequest).to.be.a('function');
     });
@@ -76,16 +77,16 @@ describe('RestApiClient', () => {
       let requestStub = sinon
         .stub(restApiClient, 'postRequest');
 
-      restApiClient.postJsonRequest(host, path, authHeader, jsonContent);
+      restApiClient.postJsonRequest(uri, authHeader, jsonContent);
 
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, 'POST', host, path, authHeader, jsonContentType, jsonContent);
+      sinon.assert.calledWith(requestStub, uri, 'POST', authHeader, jsonContentType, jsonContent);
     });
   });
 
-  describe('postXmlRequest(host, path, auth, content)', () => {
+  describe('postXmlRequest(uri, auth, content)', () => {
     it('should export function', () => {
       expect(restApiClient.postXmlRequest).to.be.a('function');
     });
@@ -93,11 +94,11 @@ describe('RestApiClient', () => {
     it('should call post request function with expected parameters', () => {
       let requestStub = sinon.stub(restApiClient, 'postRequest');
 
-      restApiClient.postXmlRequest(host, path, '', [['username','pablo'],['password','escobar']]);
+      restApiClient.postXmlRequest(uri, '', [['username','pablo'],['password','escobar']]);
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, 'POST', host, path, '', formContentType, 'username=pablo&password=escobar');
+      sinon.assert.calledWith(requestStub, uri, 'POST', '', formContentType, 'username=pablo&password=escobar');
     });
   });
 });

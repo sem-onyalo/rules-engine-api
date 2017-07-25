@@ -1,6 +1,7 @@
 "use strict";
 
 const Models = require('../../models');
+const RequestPromise = require('request-promise');
 
 module.exports = class RestApiClient {
   constructor() { }
@@ -8,57 +9,53 @@ module.exports = class RestApiClient {
   /**
    * Makes an HTTP GET request.
    * @name getRequest
-   * @param {string} host - The HTTP host name.
-   * @param {string} path - The request path.
+   * @param {string} uri - The request uri.
    * @param {string} auth - The request authorization header.
    */
-  getRequest(host, path, auth) {
-    let response = this.request(Models.RestApi.Constants.RequestMethod.GET, host, path, auth);
+  async getRequest(uri, auth) {
+    let response = await this.request(uri, Models.RestApi.Constants.RequestMethod.GET, auth);
     return response;
   }
 
   /**
    * Makes an HTTP JSON POST request.
    * @name postJsonRequest
-   * @param {string} host - The HTTP host name.
-   * @param {string} path - The request path.
+   * @param {string} uri - The request uri.
    * @param {string} auth - The request authorization header.
    * @param {string} content - The request JSON string.
    */
-  postJsonRequest(host, path, auth, content) {
-    let response = this.postRequest(Models.RestApi.Constants.RequestMethod.POST, host, path, auth, Models.RestApi.Constants.ContentType.JSON, content);
+  async postJsonRequest(uri, auth, content) {
+    let response = await this.postRequest(uri, Models.RestApi.Constants.RequestMethod.POST, auth, Models.RestApi.Constants.ContentType.JSON, content);
     return response;
   }
 
   /**
    * Makes an HTTP XML POST request.
    * @name postXmlRequest
-   * @param {string} host - The HTTP host name.
-   * @param {string} path - The request path.
+   * @param {string} uri - The request uri.
    * @param {string} auth - The request authorization header.
    * @param {Array} content - An array of key-value pairs.
    */
-  postXmlRequest(host, path, auth, content) {
+  async postXmlRequest(uri, auth, content) {
     let requestContent = '';
     for (let i = 0; i < content.length; i++) {
       requestContent += (requestContent !== '' ? '&' : '') + content[i][0] + '=' + content[i][1];
     }
 
-    let response = this.postRequest(Models.RestApi.Constants.RequestMethod.POST, host, path, auth, Models.RestApi.Constants.ContentType.FORM, requestContent);
+    let response = await this.postRequest(uri, Models.RestApi.Constants.RequestMethod.POST, auth, Models.RestApi.Constants.ContentType.FORM, requestContent);
     return response;
   }
 
   /**
    * Makes an HTTP POST request.
    * @name postRequest
-   * @param {string} host - The HTTP host name.
-   * @param {string} path - The request path.
+   * @param {string} uri - The request uri.
    * @param {string} auth - The request authorization header.
    * @param {string} contentType - The request content type.
    * @param {string} content - The request content.
    */
-  postRequest(host, path, auth, contentType, content) {
-    let response = this.request(Models.RestApi.Constants.RequestMethod.POST, host, path, auth, contentType, content);
+  async postRequest(uri, auth, contentType, content) {
+    let response = await this.request(uri, Models.RestApi.Constants.RequestMethod.POST, auth, contentType, content);
     return response;
   }
 
@@ -66,13 +63,28 @@ module.exports = class RestApiClient {
    * Makes an HTTP request.
    * @name request
    * @param {string} method - The request method.
-   * @param {string} host - The HTTP host name.
-   * @param {string} path - The request path.
+   * @param {string} uri - The request uri.
    * @param {string} auth - The request authorization header.
    * @param {string} [contentType] - The request content type.
    * @param {string} [content] - The request content.
    */
-  request(method, host, path, auth, contentType = null, content = null) {
-    return null;
+  async request(uri, method, auth = null, contentType = null, content = null) {
+    let options = {
+      uri: uri,
+      method: method,
+      headers: { }
+    };
+
+    if (auth !== null && auth !== undefined && auth !== '') {
+      options.headers['Authorization'] = auth;
+    }
+
+    if (contentType !== null && content !== null) {
+      options.body = content;
+      options.headers['Content-Type'] = contentType;
+      // options.headers['Content-Length'] = Buffer.byteLength(content);
+    }
+
+    return await RequestPromise(options);
   }
 }

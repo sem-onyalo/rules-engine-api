@@ -54,14 +54,13 @@ describe('GeolocationClient', () => {
       expect(geolocationClient.ipLookup).to.be.a('function');
     });
 
-    it('should call the RestApiClient function postRequest() with expected parameters', () => {
+    it('should call the RestApiClient function postRequest() with expected parameters', async () => {
       let ipAddress = '127.0.0.1';
       let request = new Models.RestApi.GeolocationIpLookupRequest(ipAddress);
       let getRequestStub = sinon.stub(geolocationClient, 'getRequest');
+      getRequestStub.returns('{ "country": "CA" }');
 
-      let response = geolocationClient.ipLookup(request);
-
-      getRequestStub.restore();
+      let response = await geolocationClient.ipLookup(request);
 
       let expectedUri = testApiUri + testGeolocationApiIpLookupUri + '/' + ipAddress;
 
