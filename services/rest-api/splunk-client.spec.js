@@ -13,9 +13,15 @@ chai.use(require('chai-as-promised'));
 
 describe('SplunkClient', () => {
   const testSplunkApiUri = 'https://test-lo.splunk.com';
+  const testSplunkApiUser = 'pablo';
+  const testSplunkApiPass = 'escobar';
   const testSplunkApiSearchUri = '/search';
-  const testSplunkApiAuthHeader = 'APIKEY 123';
+  const testSplunkApiAuthToken = 'a1b2c3';
+  const testSplunkApiAuthScheme = 'Splunk';
+  const testSplunkApiAuthHeader = 'Splunk a1b2c3';
   const testSplunkApiLoginPath = '/search/auth/login';
+  const testSplunkApiSearchOutputMode = 'json_rows';
+  const testSplunkApiSearchResponse = "{ \"rows\": [ [\"2017/01/01 09:15:00:::127.0.0.1\"], [\"2017/01/01 09:15:30:::127.0.0.1\"] ] }";
 
   let configServiceStub;
   let configService;
@@ -36,8 +42,20 @@ describe('SplunkClient', () => {
       .returns(testSplunkApiUri);
 
     configServiceStub
-      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_AUTH_HEADER)
-      .returns(testSplunkApiAuthHeader);
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_USER)
+      .returns(testSplunkApiUser);
+
+    configServiceStub
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_PASS)
+      .returns(testSplunkApiPass);
+
+    configServiceStub
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_AUTH_SCHEME)
+      .returns(testSplunkApiAuthScheme);
+
+    configServiceStub
+      .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_OUTPUT_MODE)
+      .returns(testSplunkApiSearchOutputMode);
 
     configServiceStub
       .withArgs(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_URI)
@@ -69,37 +87,85 @@ describe('SplunkClient', () => {
       expect(splunkClient.search).to.be.a('function');
     });
 
-    it('should call the RestApiClient function postRequest() with expected parameters and single search param', () => {
-      let query = 'search order %s', params = ['127.0.0.1'], output = 'json';
-      let request = new Models.RestApi.SplunkSearchRequest(query, params, output);
-      let postJsonRequestStub = sinon.stub(splunkClient, 'postJsonRequest');
+    it('should use the login session as the authorization header', async () => {
+      let query = 'search order %s', params = ['127.0.0.1'];
+      let request = new Models.RestApi.SplunkSearchRequest(query, params);
 
-      let response = splunkClient.search(request);
+      let loginStub = sinon.stub(splunkClient, 'login')
+        .returns(Promise.resolve({ sessionKey: testSplunkApiAuthToken }));
 
-      postJsonRequestStub.restore();
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest')
+        .returns(Promise.resolve(testSplunkApiSearchResponse));
 
-      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri;
-      let expectedContent = '{"search":"search order 127.0.0.1","output_mode":"json"}';
+      let response = await splunkClient.search(request);
+      postXmlRequestStub.restore();
+      loginStub.restore();
 
-      sinon.assert.calledOnce(postJsonRequestStub);
-      sinon.assert.calledWith(postJsonRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri + '?output_mode=' + testSplunkApiSearchOutputMode;
+      let expectedContent = [['search', 'search order 127.0.0.1']];
+
+      sinon.assert.calledOnce(loginStub);
+      sinon.assert.calledWith(postXmlRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
     });
 
-    it('should call the RestApiClient function postRequest() with expected parameters and multiple seach params', () => {
+    it('should call the RestApiClient function postRequest() with expected parameters and single search param', async () => {
+      let query = 'search order %s', params = ['127.0.0.1'];
+      let request = new Models.RestApi.SplunkSearchRequest(query, params);
+
+      let loginStub = sinon.stub(splunkClient, 'login')
+        .returns(Promise.resolve({ sessionKey: testSplunkApiAuthToken }));
+
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest')
+        .returns(Promise.resolve(testSplunkApiSearchResponse));
+
+      let response = await splunkClient.search(request);
+      postXmlRequestStub.restore();
+      loginStub.restore();
+
+      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri + '?output_mode=' + testSplunkApiSearchOutputMode;
+      let expectedContent = [['search', 'search order 127.0.0.1']];
+
+      sinon.assert.calledWith(postXmlRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+    });
+
+    it('should call the RestApiClient function postRequest() with expected parameters and multiple seach params', async () => {
       let query = 'search order %s | eval earliest=relative_time(%s, "%s")';
-      let params = ['127.0.0.1', '10/19/2016:0:0:0', '-1d'], output = 'json';
-      let request = new Models.RestApi.SplunkSearchRequest(query, params, output);
-      let postJsonRequestStub = sinon.stub(splunkClient, 'postJsonRequest');
+      let params = ['127.0.0.1', '10/19/2016:0:0:0', '-1d'];
+      let request = new Models.RestApi.SplunkSearchRequest(query, params);
 
-      let response = splunkClient.search(request);
+      let loginStub = sinon.stub(splunkClient, 'login')
+        .returns(Promise.resolve({ sessionKey: testSplunkApiAuthToken }));
 
-      postJsonRequestStub.restore();
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest')
+        .returns(Promise.resolve(testSplunkApiSearchResponse));
 
-      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri;
-      let expectedContent = '{"search":"search order 127.0.0.1 | eval earliest=relative_time(10/19/2016:0:0:0, \\"-1d\\")","output_mode":"json"}';
+      let response = await splunkClient.search(request);
+      postXmlRequestStub.restore();
+      loginStub.restore();
 
-      sinon.assert.calledOnce(postJsonRequestStub);
-      sinon.assert.calledWith(postJsonRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+      let expectedPostUri = testSplunkApiUri + testSplunkApiSearchUri + '?output_mode=' + testSplunkApiSearchOutputMode;
+      let expectedContent = [['search', 'search order 127.0.0.1 | eval earliest=relative_time(10/19/2016:0:0:0, "-1d")']];
+
+      sinon.assert.calledWith(postXmlRequestStub, expectedPostUri, testSplunkApiAuthHeader, expectedContent);
+    });
+
+    it('should return an instance of SplunkSearchResponse with the expected count value of 2', async () => {
+      let query = 'search order %s | eval earliest=relative_time(%s, "%s")';
+      let params = ['127.0.0.1', '10/19/2016:0:0:0', '-1d'];
+      let request = new Models.RestApi.SplunkSearchRequest(query, params);
+
+      let loginStub = sinon.stub(splunkClient, 'login')
+        .returns(Promise.resolve({ sessionKey: testSplunkApiAuthToken }));
+
+      let postXmlRequestStub = sinon.stub(splunkClient, 'postXmlRequest')
+        .returns(Promise.resolve(testSplunkApiSearchResponse));
+
+      let response = await splunkClient.search(request);
+      postXmlRequestStub.restore();
+      loginStub.restore();
+
+      expect(response).to.be.an.instanceof(Models.RestApi.SplunkSearchResponse);
+      assert.strictEqual(response.Count, 2, 'Should have returned 2, which is the number of rows returned from the xml request');
     });
   });
 
@@ -151,9 +217,9 @@ describe('SplunkClient', () => {
       let response = await splunkClient.login({ username: 'pablo', password: 'escobar' });
       postXmlRequestStub.restore();
 
-      let expectedResponse = { sessionKey: 'a1b2c3' };
+      let expectedResponse = { sessionKey: testSplunkApiAuthToken };
       assert.isDefined(response, 'The login function should return a response');
-      assert.strictEqual(response.sessionKey, 'a1b2c3', 'The login response session key property value was not expected');
+      assert.strictEqual(response.sessionKey, testSplunkApiAuthToken, 'The login response session key property value was not expected');
     });
   });
 });

@@ -20,6 +20,16 @@ describe('SplunkConfig', () => {
       assert.strictEqual(SplunkConfig.Keys.SPLUNK, 'Splunk', 'SPLUNK config key not expected value');
     });
 
+    it('should define a key API_AUTH_SCHEME with value "API_AUTH_SCHEME"', () => {
+      expect(SplunkConfig.Keys.API_AUTH_SCHEME).to.be.a('string');
+      assert.strictEqual(SplunkConfig.Keys.API_AUTH_SCHEME, 'API_AUTH_SCHEME', 'API_AUTH_SCHEME key not expected value');
+    });
+
+    it('should define a key API_SEARCH_OUTPUT_MODE with value "API_SEARCH_OUTPUT_MODE"', () => {
+      expect(SplunkConfig.Keys.API_SEARCH_OUTPUT_MODE).to.be.a('string');
+      assert.strictEqual(SplunkConfig.Keys.API_SEARCH_OUTPUT_MODE, 'API_SEARCH_OUTPUT_MODE', 'API_SEARCH_OUTPUT_MODE key not expected value');
+    });
+
     it('should define a key API_SEARCH_URI with value "API_SEARCH_URI"', () => {
       expect(SplunkConfig.Keys.API_SEARCH_URI).to.be.a('string');
       assert.strictEqual(SplunkConfig.Keys.API_SEARCH_URI, 'API_SEARCH_URI', 'API_SEARCH_URI key not expected value');

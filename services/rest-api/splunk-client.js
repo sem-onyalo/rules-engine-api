@@ -14,21 +14,27 @@ module.exports = class SplunkClient extends RestApiClient {
   /**
    * Splunk search
    * @param {Models.RestApi.SplunkSearchRequest} searchRequest - The search request object.
-   *
+   * @returns {Models.RestApi.SplunkSearchResponse}
    */
-  search(searchRequest) {
+  async search(searchRequest) {
     let apiUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_URI);
-    let apiAuth = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_AUTH_HEADER);
+    let apiUser = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_USER);
+    let apiPass = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_PASS);
     let searchUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_URI);
+    let apiAuthScheme = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_AUTH_SCHEME);
+    let searchOutputMode = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_OUTPUT_MODE);
 
-    let searchRequestContent = SprintfJs.vsprintf(searchRequest.SearchQuery, searchRequest.SearchQueryParams);
+    let loginResponse = await this.login({ username: apiUser, password: apiPass});
+    let apiAuth = apiAuthScheme + ' ' + loginResponse.sessionKey;
 
-    let jsonRequest = JSON.stringify({
-      search : searchRequestContent,
-      output_mode : searchRequest.SearchQueryResponseType
-    });
+    let searchRequestContent = [['search', SprintfJs.vsprintf(searchRequest.SearchQuery, searchRequest.SearchQueryParams)]];
 
-    return this.postJsonRequest(apiUri + searchUri, apiAuth, jsonRequest);
+    let requestUri = apiUri + searchUri + '?output_mode=' + searchOutputMode;
+
+    let postResponse = await this.postXmlRequest(requestUri, apiAuth, searchRequestContent);
+    let postResponseJson = JSON.parse(postResponse);
+
+    return new Models.RestApi.SplunkSearchResponse(postResponseJson.rows.length);
   }
 
   /**
@@ -43,7 +49,7 @@ module.exports = class SplunkClient extends RestApiClient {
     let loginRequestContent = [['username', loginRequest.username], ['password', loginRequest.password]];
     let postResponse = await this.postXmlRequest(apiUri + loginPath, '', loginRequestContent);
     let postResponseObj = XmlJsConvert.xml2js(postResponse, {compact:true});
-    
+
     let sessionKey = postResponseObj.response.hasOwnProperty('sessionKey') ? postResponseObj.response.sessionKey._text : null;
 
     return { sessionKey: sessionKey };
