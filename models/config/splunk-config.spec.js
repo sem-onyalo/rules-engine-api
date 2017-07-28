@@ -20,6 +20,16 @@ describe('SplunkConfig', () => {
       assert.strictEqual(SplunkConfig.Keys.SPLUNK, 'Splunk', 'SPLUNK config key not expected value');
     });
 
+    it('should define a key API_USER with value "API_USER"', () => {
+      expect(SplunkConfig.Keys.API_USER).to.be.a('string');
+      assert.strictEqual(SplunkConfig.Keys.API_USER, 'API_USER', 'API_USER key not expected value');
+    });
+
+    it('should define a key API_PASS with value "API_PASS"', () => {
+      expect(SplunkConfig.Keys.API_PASS).to.be.a('string');
+      assert.strictEqual(SplunkConfig.Keys.API_PASS, 'API_PASS', 'API_PASS key not expected value');
+    });
+
     it('should define a key API_AUTH_SCHEME with value "API_AUTH_SCHEME"', () => {
       expect(SplunkConfig.Keys.API_AUTH_SCHEME).to.be.a('string');
       assert.strictEqual(SplunkConfig.Keys.API_AUTH_SCHEME, 'API_AUTH_SCHEME', 'API_AUTH_SCHEME key not expected value');

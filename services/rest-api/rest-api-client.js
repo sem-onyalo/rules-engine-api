@@ -25,7 +25,7 @@ module.exports = class RestApiClient {
    * @param {string} content - The request JSON string.
    */
   async postJsonRequest(uri, auth, content) {
-    let response = await this.postRequest(uri, Models.RestApi.Constants.RequestMethod.POST, auth, Models.RestApi.Constants.ContentType.JSON, content);
+    let response = await this.postRequest(uri, auth, Models.RestApi.Constants.ContentType.JSON, content);
     return response;
   }
 
@@ -42,7 +42,7 @@ module.exports = class RestApiClient {
       requestContent += (requestContent !== '' ? '&' : '') + content[i][0] + '=' + content[i][1];
     }
 
-    let response = await this.postRequest(uri, Models.RestApi.Constants.RequestMethod.POST, auth, Models.RestApi.Constants.ContentType.FORM, requestContent);
+    let response = await this.postRequest(uri, auth, Models.RestApi.Constants.ContentType.FORM, requestContent);
     return response;
   }
 
@@ -72,6 +72,7 @@ module.exports = class RestApiClient {
     let options = {
       uri: uri,
       method: method,
+      rejectUnauthorized: false,
       headers: { }
     };
 
@@ -82,7 +83,6 @@ module.exports = class RestApiClient {
     if (contentType !== null && content !== null) {
       options.body = content;
       options.headers['Content-Type'] = contentType;
-      // options.headers['Content-Length'] = Buffer.byteLength(content);
     }
 
     return await RequestPromise(options);

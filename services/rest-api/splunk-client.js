@@ -18,8 +18,8 @@ module.exports = class SplunkClient extends RestApiClient {
    */
   async search(searchRequest) {
     let apiUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_URI);
-    let apiUser = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_USER);
-    let apiPass = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.RestApi.Keys.API_PASS);
+    let apiUser = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_USER);
+    let apiPass = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_PASS);
     let searchUri = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_URI);
     let apiAuthScheme = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_AUTH_SCHEME);
     let searchOutputMode = this._configService.getSetting(Models.Config.Splunk.Keys.SPLUNK, Models.Config.Splunk.Keys.API_SEARCH_OUTPUT_MODE);

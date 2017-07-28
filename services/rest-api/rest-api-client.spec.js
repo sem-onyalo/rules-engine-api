@@ -82,7 +82,7 @@ describe('RestApiClient', () => {
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, uri, 'POST', authHeader, jsonContentType, jsonContent);
+      sinon.assert.calledWith(requestStub, uri, authHeader, jsonContentType, jsonContent);
     });
   });
 
@@ -98,7 +98,7 @@ describe('RestApiClient', () => {
       requestStub.restore();
 
       sinon.assert.calledOnce(requestStub);
-      sinon.assert.calledWith(requestStub, uri, 'POST', '', formContentType, 'username=pablo&password=escobar');
+      sinon.assert.calledWith(requestStub, uri, '', formContentType, 'username=pablo&password=escobar');
     });
   });
 });

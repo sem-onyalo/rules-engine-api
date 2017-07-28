@@ -3,6 +3,8 @@
 module.exports = {
   Keys : {
     SPLUNK: 'Splunk',
+    API_USER: 'API_USER',
+    API_PASS: 'API_PASS',
     API_SEARCH_URI: 'API_SEARCH_URI',
     API_LOGIN_PATH: 'API_LOGIN_PATH',
     API_AUTH_SCHEME: 'API_AUTH_SCHEME',
