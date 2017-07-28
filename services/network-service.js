@@ -7,8 +7,8 @@ module.exports = class NetworkService {
     this._blockItemRepository = blockItemRepository;
   }
 
-  isEmailBlocked(email) {
-    let blockitem = this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, email);
+  async isEmailBlocked(email) {
+    let blockitem = await this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, email);
     return blockitem != null;
   }
 }

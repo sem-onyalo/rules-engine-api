@@ -1,8 +1,10 @@
 "use strict";
 
-const assert = require('chai').assert;
-const expect = require('chai').expect;
+const chai = require('chai');
 const sinon = require('sinon');
+const assert = chai.assert;
+const expect = chai.expect;
+chai.use(require('chai-as-promised'));
 
 const AccountService = require('./account-service');
 const EmailService = require('./cross-cutters/email-service');
@@ -61,12 +63,10 @@ describe('RuleService', () => {
         this.RuleId = 123;
       };
 
-      let executeRuleFn = function () { ruleService.executeRule(ruleRequest) };
-
-      expect(executeRuleFn).to.throw('Unsupported rule request type');
+      return assert.isRejected(ruleService.executeRule(ruleRequest), 'Unsupported rule request type');
     });
 
-    it('should run the source IP rule and return rule passed if countries from rule in repository and ip lookup match', () => {
+    it('should run the source IP rule and return rule passed if countries from rule in repository and ip lookup match', async () => {
       let ruleId = 123, ruleScore = 0, sourceIp = '127.0.0.1';
       let country = new Models.Country(1, 'CA');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
@@ -74,13 +74,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code]));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code])));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
-        .returns(new Models.RestApi.GeolocationIpLookupResponse(country.Code));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse(country.Code)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -95,7 +95,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the source IP rule and return rule not passed if countries from rule in repository and ip lookup match', () => {
+    it('should run the source IP rule and return rule not passed if countries from rule in repository and ip lookup do not match', async () => {
       let ruleId = 123, ruleScore = 0, sourceIp = '127.0.0.1';
       let country = new Models.Country(1, 'CA');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
@@ -103,13 +103,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code]));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country.Code])));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('US'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('US')));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -124,7 +124,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the source IP rule and return the rule score if the rule failed', () => {
+    it('should run the source IP rule and return the rule score if the rule failed', async () => {
       let ruleId = 123, ruleScore = 2.5, sourceIp = '127.0.0.1';
       let country1 = new Models.Country(1, 'CA'), country2 = new Models.Country(1, 'US');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
@@ -132,13 +132,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code]));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code])));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('TH')));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -153,7 +153,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to expected value');
     });
 
-    it('should run the source IP rule and return rule score 0 if the rule passed', () => {
+    it('should run the source IP rule and return rule score 0 if the rule passed', async () => {
       let ruleId = 123, ruleScore = 2.5, sourceIp = '127.0.0.1';
       let country1 = new Models.Country(1, 'CA'), country2 = new Models.Country(1, 'US');
       let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(ruleId, sourceIp);
@@ -161,13 +161,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code]));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(ruleId, ruleScore, [country1.Code, country2.Code])));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup')
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('US'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('US')));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -182,19 +182,19 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
-    it('should run the email blocklist rule and return rule passed if email is not on blocklist', () => {
+    it('should run the email blocklist rule and return rule passed if email is not on blocklist', async () => {
       let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false));
+        .returns(Promise.resolve(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false)));
 
       blockItemRepositoryStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
-        .returns(null);
+        .returns(Promise.resolve(null));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       blockItemRepositoryStub.restore();
 
@@ -205,19 +205,19 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the email blocklist rule and return rule failed if email is on blocklist', () => {
+    it('should run the email blocklist rule and return rule failed if email is on blocklist', async () => {
       let ruleId = 123, ruleScore = 2.5, email = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleId, email);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false));
+        .returns(Promise.resolve(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, false)));
 
       blockItemRepositoryStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
-        .returns(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com'));
+        .returns(Promise.resolve(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com')));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       blockItemRepositoryStub.restore();
 
@@ -228,36 +228,36 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the email blocklist rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+    it('should run the email blocklist rule and send an email if the rule fails and the EmailOnFail flag is set', async () => {
       let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, true, emailTo, emailSubject, emailBody));
+        .returns(Promise.resolve(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST, true, emailTo, emailSubject, emailBody)));
 
       blockItemRepositoryStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
-        .returns(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com'));
+        .returns(Promise.resolve(new Models.BlockItem(1, Models.BlockItemType.Email, 'jdoe@nomail.com')));
 
-      ruleService.executeRule(new Models.Rules.ExecuteEmailBlocklistRuleRequest(1, 'jdoe@nomail.com'));
+      await ruleService.executeRule(new Models.Rules.ExecuteEmailBlocklistRuleRequest(1, 'jdoe@nomail.com'));
 
       ruleRepositoryStub.restore();
       sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
     });
 
-    it('should run the account locked rule and return rule failed if account is locked', () => {
+    it('should run the account locked rule and return rule failed if account is locked', async () => {
       let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = true;
       let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore, false));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore, false)));
 
       accountRepositoryStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(new Models.Account(accountId, isAccountLocked));
+        .returns(Promise.resolve(new Models.Account(accountId, isAccountLocked)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       accountRepositoryStub.restore();
 
@@ -268,19 +268,19 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the account locked rule and return rule passed if account is not locked', () => {
+    it('should run the account locked rule and return rule passed if account is not locked', async () => {
       let ruleId = 123, ruleScore = 0, accountId = 456, isAccountLocked = false;
       let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleId, accountId);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore, false));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore, false)));
 
       accountRepositoryStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(new Models.Account(accountId, isAccountLocked));
+        .returns(Promise.resolve(new Models.Account(accountId, isAccountLocked)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       accountRepositoryStub.restore();
 
@@ -291,32 +291,32 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the account locked rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+    it('should run the account locked rule and send an email if the rule fails and the EmailOnFail flag is set', async () => {
       let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.ACCOUNT_LOCKED, true, emailTo, emailSubject, emailBody));
+        .returns(Promise.resolve(new Models.Rules.Rule(1, 0, Models.Rules.RuleType.ACCOUNT_LOCKED, true, emailTo, emailSubject, emailBody)));
 
       accountRepositoryStub = sinon
         .stub(accountRepository, 'selectById')
-        .returns(new Models.Account(987, true));
+        .returns(Promise.resolve(new Models.Account(987, true)));
 
-      ruleService.executeRule(new Models.Rules.ExecuteAccountLockedRuleRequest(1, 987));
+      await ruleService.executeRule(new Models.Rules.ExecuteAccountLockedRuleRequest(1, 987));
 
       ruleRepositoryStub.restore();
       sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
     });
 
-    it('should run the different email rule and return rule failed if emails are different', () => {
+    it('should run the different email rule and return rule failed if emails are different', async () => {
       let ruleId = 123, ruleScore = 0, expectedEmail = 'jdoe@nomail.com', actualEmail = 'john.doe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
 
@@ -324,15 +324,15 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the different email rule and return rule passed if email are the same', () => {
+    it('should run the different email rule and return rule passed if email are the same', async () => {
       let ruleId = 123, ruleScore = 0, expectedEmail = 'jdoe@nomail.com', actualEmail = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
 
@@ -340,15 +340,15 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the different email rule and return the rule score if the rule failed', () => {
+    it('should run the different email rule and return the rule score if the rule failed', async () => {
       let ruleId = 123, ruleScore = 2.5, expectedEmail = 'jdoe@nomail.com', actualEmail = 'john.doe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
 
@@ -359,15 +359,15 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to the expected value');
     });
 
-    it('should run the different email rule and return a rule score 0 if the rule passed', () => {
+    it('should run the different email rule and return a rule score 0 if the rule passed', async () => {
       let ruleId = 123, ruleScore = 2.5, expectedEmail = 'jdoe@nomail.com', actualEmail = 'jdoe@nomail.com';
       let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(ruleId, expectedEmail, actualEmail);
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.Rule(ruleId, ruleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(ruleId, ruleScore)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
 
@@ -378,7 +378,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
-    it('should run the orders created in timespan rule and return rule failed if search count > rule threshold count', () => {
+    it('should run the orders created in timespan rule and return rule failed if search count > rule threshold count', async () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -389,13 +389,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -410,7 +410,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the orders created in timespan rule and return rule passed if search count == rule threshould count', () => {
+    it('should run the orders created in timespan rule and return rule passed if search count == rule threshould count', async () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 1, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -421,13 +421,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -442,7 +442,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the orders created in timespan rule and return rule passed if search count < rule threshould count', () => {
+    it('should run the orders created in timespan rule and return rule passed if search count < rule threshould count', async () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 0, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -453,13 +453,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -474,7 +474,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the orders created in timespan rule and return rule score if rule failed', () => {
+    it('should run the orders created in timespan rule and return rule score if rule failed', async () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -485,13 +485,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -506,7 +506,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to the expected value');
     });
 
-    it('should run the orders created in timespan rule and return rule score 0 if rule passed', () => {
+    it('should run the orders created in timespan rule and return rule score 0 if rule passed', async () => {
       let ruleId = 123, accountId = '456', orderId = 'a1b2c3';
       let ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180;
       let splunkSearchCount = 1;
@@ -517,13 +517,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -538,7 +538,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
-    it('should run the requests from ip in timespan rule and return rule failed if search count > rule threshold', () => {
+    it('should run the requests from ip in timespan rule and return rule failed if search count > rule threshold', async () => {
       let ipAddress = '127.0.0.1', accountId = '456';
       let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180, accountCountThreshold = 2;
       let splunkSearchCount = 1;
@@ -549,13 +549,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -570,7 +570,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, false, 'Rule should not have passed');
     });
 
-    it('should run the requests from ip in timespan rule and return rule passed if search count == rule threshold', () => {
+    it('should run the requests from ip in timespan rule and return rule passed if search count == rule threshold', async () => {
       let ipAddress = '127.0.0.1', accountId = '456';
       let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 1, ruleThresholdMin = 180, accountCountThreshold = 2;
       let splunkSearchCount = 1;
@@ -581,13 +581,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -602,7 +602,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the requests from ip in timespan rule and return rule passed if search count < rule threshold', () => {
+    it('should run the requests from ip in timespan rule and return rule passed if search count < rule threshold', async () => {
       let ipAddress = '127.0.0.1', accountId = '456';
       let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 2, ruleThresholdMin = 180, accountCountThreshold = 2;
       let splunkSearchCount = 1;
@@ -613,13 +613,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -634,7 +634,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.IsRulePass, true, 'Rule should have passed');
     });
 
-    it('should run the requests from ip in timespan rule and return rule score if the rule failed', () => {
+    it('should run the requests from ip in timespan rule and return rule score if the rule failed', async () => {
       let ipAddress = '127.0.0.1', accountId = '456';
       let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 0, ruleThresholdMin = 180, accountCountThreshold = 2;
       let splunkSearchCount = 1;
@@ -645,13 +645,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -666,7 +666,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 2.5, 'Rule score was not set to expected value');
     });
 
-    it('should run the requests from ip in timespan rule and return rule score 0 if the rule passed', () => {
+    it('should run the requests from ip in timespan rule and return rule score 0 if the rule passed', async () => {
       let ipAddress = '127.0.0.1', accountId = '456';
       let ruleId = 123, ruleScore = 2.5, ruleThresholdCount = 1, ruleThresholdMin = 180, accountCountThreshold = 2;
       let splunkSearchCount = 1;
@@ -677,13 +677,13 @@ describe('RuleService', () => {
 
       ruleRepositoryStub = sinon
         .stub(ruleRepository, 'selectById')
-        .returns(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(ruleId, ruleScore, ruleThresholdCount, ruleThresholdMin, accountCountThreshold)));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       splunkClientStub.restore();
@@ -698,7 +698,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 0, 'Rule score should be zero if rule passed');
     });
 
-    it('should run the score threshold rule and return a combined rule score and rule failed if combined rule score > threshold', () => {
+    it('should run the score threshold rule and return a combined rule score and rule failed if combined rule score > threshold', async () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
       let differentEmailRuleScore = 1, sourceIpRuleScore = 2, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
@@ -718,36 +718,36 @@ describe('RuleService', () => {
 
       ruleRepositoryStub
         .withArgs(ruleId)
-        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
+        .returns(Promise.resolve(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules)));
 
       ruleRepositoryStub
         .withArgs(differentEmailRuleId)
-        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore)));
 
       ruleRepositoryStub
         .withArgs(sourceIpRuleId)
-        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US'])));
 
       ruleRepositoryStub
         .withArgs(ordersCreatedRuleId)
-        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin)));
 
       ruleRepositoryStub
         .withArgs(requestsFromIpRuleId)
-        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold)));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
 
       geolocationClientStub
         .withArgs(sourceIp)
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('TH')));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -760,7 +760,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 10, 'Rule score was not expected value');
     });
 
-    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score == threshold', () => {
+    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score == threshold', async () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
       let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 3, requestsFromIpRuleScore = 4;
@@ -780,36 +780,36 @@ describe('RuleService', () => {
 
       ruleRepositoryStub
         .withArgs(ruleId)
-        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
+        .returns(Promise.resolve(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules)));
 
       ruleRepositoryStub
         .withArgs(differentEmailRuleId)
-        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore)));
 
       ruleRepositoryStub
         .withArgs(sourceIpRuleId)
-        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US'])));
 
       ruleRepositoryStub
         .withArgs(ordersCreatedRuleId)
-        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin)));
 
       ruleRepositoryStub
         .withArgs(requestsFromIpRuleId)
-        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold)));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
 
       geolocationClientStub
         .withArgs(sourceIp)
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('TH')));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -822,7 +822,7 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 9, 'Rule score was not expected value');
     });
 
-    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score < threshold', () => {
+    it('should run the score threshold rule and return a combined rule score and rule passed if combined rule score < threshold', async () => {
       let ruleId = 1, scoreThreshold = 9, accountId = 456, orderId = 789;
       let differentEmailRuleId = 2, sourceIpRuleId = 3, ordersCreatedRuleId = 4, requestsFromIpRuleId = 5;
       let differentEmailRuleScore = 1, sourceIpRuleScore = 1, ordersCreatedRuleScore = 2, requestsFromIpRuleScore = 4;
@@ -842,36 +842,36 @@ describe('RuleService', () => {
 
       ruleRepositoryStub
         .withArgs(ruleId)
-        .returns(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules));
+        .returns(Promise.resolve(new Models.Rules.RuleScoreThreshold(ruleId, Models.Rules.RuleType.SCORE_THRESHOLD, 0, scoreThreshold, childRules)));
 
       ruleRepositoryStub
         .withArgs(differentEmailRuleId)
-        .returns(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore));
+        .returns(Promise.resolve(new Models.Rules.Rule(differentEmailRuleId, differentEmailRuleScore)));
 
       ruleRepositoryStub
         .withArgs(sourceIpRuleId)
-        .returns(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US']));
+        .returns(Promise.resolve(new Models.Rules.RuleSourceIp(sourceIpRuleId, sourceIpRuleScore, ['CA','US'])));
 
       ruleRepositoryStub
         .withArgs(ordersCreatedRuleId)
-        .returns(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin));
+        .returns(Promise.resolve(new Models.Rules.RuleFrequency(ordersCreatedRuleId, ordersCreatedRuleScore, ordersCreatedRuleThresholdCount, ordersCreatedRuleThresholdMin)));
 
       ruleRepositoryStub
         .withArgs(requestsFromIpRuleId)
-        .returns(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold));
+        .returns(Promise.resolve(new Models.Rules.RuleAccountFrequency(requestsFromIpRuleId, requestsFromIpRuleScore, requestsFromIpRuleThresholdCount, requestsFromIpRuleThresholdMin, accountCountThreshold)));
 
       geolocationClientStub = sinon
         .stub(geolocationClient, 'ipLookup');
 
       geolocationClientStub
         .withArgs(sourceIp)
-        .returns(new Models.RestApi.GeolocationIpLookupResponse('TH'));
+        .returns(Promise.resolve(new Models.RestApi.GeolocationIpLookupResponse('TH')));
 
       splunkClientStub = sinon
         .stub(splunkClient, 'search')
-        .returns(new Models.RestApi.SplunkSearchResponse(splunkSearchCount));
+        .returns(Promise.resolve(new Models.RestApi.SplunkSearchResponse(splunkSearchCount)));
 
-      let ruleResponse = ruleService.executeRule(ruleRequest);
+      let ruleResponse = await ruleService.executeRule(ruleRequest);
 
       ruleRepositoryStub.restore();
       geolocationClientStub.restore();
@@ -884,22 +884,22 @@ describe('RuleService', () => {
       assert.strictEqual(ruleResponse.RuleScore, 8, 'Rule score was not expected value');
     });
 
-    it('should run the score threshold rule and send an email if the rule fails and the EmailOnFail flag is set', () => {
+    it('should run the score threshold rule and send an email if the rule fails and the EmailOnFail flag is set', async () => {
       let emailTo = 'fraudteam@nomail.com', emailSubject = 'Rule Failure', emailBody = 'A rule failed';
 
       ruleRepositoryStub = sinon.stub(ruleRepository, 'selectById');
 
       ruleRepositoryStub
         .withArgs(1)
-        .returns(new Models.Rules.RuleScoreThreshold(1, Models.Rules.RuleType.SCORE_THRESHOLD, 0, 5, [
+        .returns(Promise.resolve(new Models.Rules.RuleScoreThreshold(1, Models.Rules.RuleType.SCORE_THRESHOLD, 0, 5, [
           new Models.Rules.Rule(2, 10, Models.Rules.RuleType.DIFFERENT_EMAIL)
-        ], true, emailTo, emailSubject, emailBody));
+        ], true, emailTo, emailSubject, emailBody)));
 
       ruleRepositoryStub
         .withArgs(2)
-        .returns(new Models.Rules.Rule(2, 10));
+        .returns(Promise.resolve(new Models.Rules.Rule(2, 10)));
 
-      ruleService.executeRule(new Models.Rules.ExecuteScoreThresholdRuleRequest(1, null, null, 'john.doe@nomail.com', 'jdoe@nomail.com', null));
+      await ruleService.executeRule(new Models.Rules.ExecuteScoreThresholdRuleRequest(1, null, null, 'john.doe@nomail.com', 'jdoe@nomail.com', null));
 
       ruleRepositoryStub.restore();
       sinon.assert.calledWith(emailServiceStub, emailBody, emailSubject, emailTo);
@@ -916,32 +916,32 @@ describe('RuleService', () => {
       expect(ruleService.executeRuleSet).to.be.a('function');
     });
 
-    it('should run all rules in a rule set', () => {
+    it('should run all rules in a rule set', async () => {
       let accountLockedRuleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(accountLockedRuleId, accountId);
       let emailBlocklistRuleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(emailBlocklistRuleId, actualEmail);
       let scoreThresholdRuleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(scoreThresholdRuleId, orderId, accountId, expectedEmail, actualEmail, sourceIp);
 
       let getRuleSetStub = sinon
         .stub(ruleSetRepository, 'selectById')
-        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+        .returns(Promise.resolve(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
           new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
           new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
           new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
-        ], false));
+        ], false)));
 
         let executeAccountLockedRuleStub = sinon
           .stub(ruleService, 'executeAccountLockedRule')
-          .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+          .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5)));
 
         let executeEmailBlocklistRuleStub = sinon
           .stub(ruleService, 'executeEmailBlocklistRule')
-          .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5));
+          .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5)));
 
         let executeScoreThresholdRuleStub = sinon
           .stub(ruleService, 'executeScoreThresholdRule')
-          .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+          .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5)));
 
-      ruleService.executeRuleSet(ruleSetRequest);
+      await ruleService.executeRuleSet(ruleSetRequest);
 
       getRuleSetStub.restore();
       executeAccountLockedRuleStub.restore();
@@ -953,103 +953,101 @@ describe('RuleService', () => {
       sinon.assert.calledWith(executeScoreThresholdRuleStub, scoreThresholdRuleRequest);
     });
 
-    it('should return rule set passed if all rules passed', () => {
+    it('should return rule set passed if all rules passed', async () => {
       let getRuleSetStub = sinon
         .stub(ruleSetRepository, 'selectById')
-        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+        .returns(Promise.resolve(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
           new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
           new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
           new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
-        ], false));
+        ], false)));
 
       let executeAccountLockedRuleStub = sinon
         .stub(ruleService, 'executeAccountLockedRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5)));
 
       let executeEmailBlocklistRuleStub = sinon
         .stub(ruleService, 'executeEmailBlocklistRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, true, 4.5)));
 
       let executeScoreThresholdRuleStub = sinon
         .stub(ruleService, 'executeScoreThresholdRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5)));
 
-      let response = ruleService.executeRuleSet(ruleSetRequest);
+      let response = await ruleService.executeRuleSet(ruleSetRequest);
 
       assert.isDefined(response, 'Execute rule set should return a response');
       assert.strictEqual(response.RulePassed, true, 'Rule set should pass');
     });
 
-    it('should return rule set failed if one out of x rules fails', () => {
+    it('should return rule set failed if one out of x rules fails', async () => {
       let getRuleSetStub = sinon
         .stub(ruleSetRepository, 'selectById')
-        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+        .returns(Promise.resolve(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
           new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
           new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
           new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
-        ], false));
+        ], false)));
 
       let executeAccountLockedRuleStub = sinon
         .stub(ruleService, 'executeAccountLockedRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5)));
 
       let executeEmailBlocklistRuleStub = sinon
         .stub(ruleService, 'executeEmailBlocklistRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5)));
 
       let executeScoreThresholdRuleStub = sinon
         .stub(ruleService, 'executeScoreThresholdRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5)));
 
-      let response = ruleService.executeRuleSet(ruleSetRequest);
+      let response = await ruleService.executeRuleSet(ruleSetRequest);
 
       assert.isDefined(response, 'Execute rule set should return a response');
       assert.strictEqual(response.RulePassed, false, 'Rule set should not pass');
     });
 
-    it('should stop processing rules if rule fails and flag is set', () => {
+    it('should stop processing rules if rule fails and flag is set', async () => {
       let getRuleSetStub = sinon
         .stub(ruleSetRepository, 'selectById')
-        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+        .returns(Promise.resolve(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
           new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
           new Models.Rules.Rule(emailBlocklistRuleId, 0, Models.Rules.RuleType.EMAIL_BLOCKLIST),
           new Models.Rules.Rule(scoreThresholdRuleId, 0, Models.Rules.RuleType.SCORE_THRESHOLD)
-        ], true));
+        ], true)));
 
       let executeAccountLockedRuleStub = sinon
         .stub(ruleService, 'executeAccountLockedRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5)));
 
       let executeEmailBlocklistRuleStub = sinon
         .stub(ruleService, 'executeEmailBlocklistRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(emailBlocklistRuleId, false, 4.5)));
 
       let executeScoreThresholdRuleStub = sinon
         .stub(ruleService, 'executeScoreThresholdRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(scoreThresholdRuleId, true, 4.5)));
 
-      let response = ruleService.executeRuleSet(ruleSetRequest);
+      let response = await ruleService.executeRuleSet(ruleSetRequest);
 
       assert.isDefined(response, 'Execute rule set should return a response');
       assert.strictEqual(response.RulePassed, false, 'Rule set should not pass');
       sinon.assert.notCalled(executeScoreThresholdRuleStub);
     });
 
-    it('should throw an exception if there is an unsupported rule in the rule set', () => {
+    it('should throw an exception if there is an unsupported rule in the rule set', async () => {
       let getRuleSetStub = sinon
         .stub(ruleSetRepository, 'selectById')
-        .returns(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
+        .returns(Promise.resolve(new Models.Rules.RuleSet(ruleSetId, 'Rule Set', [
           new Models.Rules.Rule(accountLockedRuleId, 0, Models.Rules.RuleType.ACCOUNT_LOCKED),
           new Models.Rules.Rule(emailBlocklistRuleId, 0, 9999)
-        ], true));
+        ], true)));
 
       let executeAccountLockedRuleStub = sinon
         .stub(ruleService, 'executeAccountLockedRule')
-        .returns(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5));
+        .returns(Promise.resolve(new Models.Rules.ExecuteRuleResponse(accountLockedRuleId, true, 4.5)));
 
-      let executeRuleSetFn = function () { ruleService.executeRuleSet(ruleSetRequest); };
-
-      expect(executeRuleSetFn).to.throw('Unsupported rule type in rule set');
+      return assert.isRejected(ruleService.executeRuleSet(ruleSetRequest), 'Unsupported rule type in rule set');
     });
   });
 });

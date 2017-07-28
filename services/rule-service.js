@@ -32,21 +32,21 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteRuleSetRequest} executeRuleSetRequest - The rule set execution object.
    * @returns {Models.Rules.ExecuteRuleSetResponse}
    */
-  executeRuleSet(executeRuleSetRequest) {
+  async executeRuleSet(executeRuleSetRequest) {
     let rulePassed = true;
     let executeRuleSetMessage = '';
-    let ruleSet = this._ruleSetRepository.selectById(executeRuleSetRequest.RuleSetId);
+    let ruleSet = await this._ruleSetRepository.selectById(executeRuleSetRequest.RuleSetId);
     for (let i = 0; i < ruleSet.Rules.length; i++) {
       let ruleResponse;
       if (ruleSet.Rules[i].Type == Models.Rules.RuleType.ACCOUNT_LOCKED) {
         let ruleRequest = new Models.Rules.ExecuteAccountLockedRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.AccountId);
-        ruleResponse = this.executeAccountLockedRule(ruleRequest);
+        ruleResponse = await this.executeAccountLockedRule(ruleRequest);
       } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.EMAIL_BLOCKLIST) {
         let ruleRequest = new Models.Rules.ExecuteEmailBlocklistRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.ActualEmail);
-        ruleResponse = this.executeEmailBlocklistRule(ruleRequest);
+        ruleResponse = await this.executeEmailBlocklistRule(ruleRequest);
       } else if (ruleSet.Rules[i].Type == Models.Rules.RuleType.SCORE_THRESHOLD) {
         let ruleRequest = new Models.Rules.ExecuteScoreThresholdRuleRequest(ruleSet.Rules[i].Id, executeRuleSetRequest.OrderId, executeRuleSetRequest.AccountId, executeRuleSetRequest.ExpectedEmail, executeRuleSetRequest.ActualEmail, executeRuleSetRequest.SourceIp);
-        ruleResponse = this.executeScoreThresholdRule(ruleRequest);
+        ruleResponse = await this.executeScoreThresholdRule(ruleRequest);
       } else {
         throw 'Unsupported rule type in rule set';
       }
@@ -64,21 +64,21 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteRuleRequest} executeRuleRequest - The rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeRule(executeRuleRequest) {
+  async executeRule(executeRuleRequest) {
     if (executeRuleRequest instanceof Models.Rules.ExecuteAccountLockedRuleRequest) {
-      return this.executeAccountLockedRule(executeRuleRequest);
+      return await this.executeAccountLockedRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteEmailBlocklistRuleRequest) {
-      return this.executeEmailBlocklistRule(executeRuleRequest);
+      return await this.executeEmailBlocklistRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteScoreThresholdRuleRequest) {
-      return this.executeScoreThresholdRule(executeRuleRequest);
+      return await this.executeScoreThresholdRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteDifferentEmailRuleRequest) {
-      return this.executeDifferentEmailRule(executeRuleRequest);
+      return await this.executeDifferentEmailRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteSourceIpRuleRequest) {
-      return this.executeSourceIpRule(executeRuleRequest);
+      return await this.executeSourceIpRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest) {
-      return this.executeOrdersCreatedInTimespanRule(executeRuleRequest);
+      return await this.executeOrdersCreatedInTimespanRule(executeRuleRequest);
     } else if (executeRuleRequest instanceof Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest) {
-      return this.executeRequestsFromIpInTimespanRule(executeRuleRequest);
+      return await this.executeRequestsFromIpInTimespanRule(executeRuleRequest);
     } else {
       throw 'Unsupported rule request type';
     }
@@ -90,9 +90,9 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteSourceIpRuleRequest} executeRuleRequest - The source IP rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeSourceIpRule(executeRuleRequest) {
-    let sourceIpRule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
-    let ipLookupResponse = this._geolocationClient.ipLookup(executeRuleRequest.SourceIp);
+  async executeSourceIpRule(executeRuleRequest) {
+    let sourceIpRule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
+    let ipLookupResponse = await this._geolocationClient.ipLookup(executeRuleRequest.SourceIp);
 
     let rulePassed = false, ruleScore = sourceIpRule.Score;
     for (let i = 0; i < sourceIpRule.CountryCodes.length; i++) {
@@ -113,9 +113,9 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteEmailBlocklistRuleRequest} executeRuleRequest - The email blocklist rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeEmailBlocklistRule(executeRuleRequest) {
-    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
-    let blockItem = this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, executeRuleRequest.Email);
+  async executeEmailBlocklistRule(executeRuleRequest) {
+    let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
+    let blockItem = await this._blockItemRepository.selectByTypeAndValue(Models.BlockItemType.Email, executeRuleRequest.Email);
     let rulePassed = blockItem == null;
 
     let response = this.handleRuleResult(rule, rulePassed, 0);
@@ -128,9 +128,9 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteAccountLockedRuleRequest} executeRuleRequest - The account locked rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeAccountLockedRule(executeRuleRequest) {
-    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
-    let account = this._accountRepository.selectById(executeRuleRequest.AccountId);
+  async executeAccountLockedRule(executeRuleRequest) {
+    let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
+    let account = await this._accountRepository.selectById(executeRuleRequest.AccountId);
     let rulePassed = account == null || (account != null && account.IsLocked == false);
 
     let response = this.handleRuleResult(rule, rulePassed, 0);
@@ -143,8 +143,8 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteDifferentEmailRuleRequest} executeRuleRequest - The different email rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeDifferentEmailRule(executeRuleRequest) {
-     let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+  async executeDifferentEmailRule(executeRuleRequest) {
+     let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
      let rulePassed = executeRuleRequest.ExpectedEmail == executeRuleRequest.ActualEmail;
      let ruleScore = !rulePassed ? rule.Score : 0;
      let response = new Models.Rules.ExecuteRuleResponse(executeRuleRequest.RuleId, rulePassed, ruleScore);
@@ -157,8 +157,8 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest} executeRuleRequest - The orders created in a timespan rule execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeOrdersCreatedInTimespanRule(executeRuleRequest) {
-     let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+  async executeOrdersCreatedInTimespanRule(executeRuleRequest) {
+     let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
      let splunkSearchParams = [executeRuleRequest.OrderId, 'now()', (rule.ThresholdMinutes * -1).toString() + 'm'];
      let splunkSearchRequest = new Models.RestApi.SplunkSearchRequest(
        Models.RestApi.SplunkSearchQueries.ORDERS_CREATED_IN_TIMESPAN,
@@ -166,7 +166,7 @@ module.exports = class RuleService {
        'json'
      );
 
-     let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
+     let splunkSearchResponse = await this._splunkClient.search(splunkSearchRequest);
 
      let rulePassed = splunkSearchResponse.Count <= rule.ThresholdCount;
      let ruleScore = !rulePassed ? rule.Score : 0;
@@ -180,8 +180,8 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest} executeRuleRequest - The requests from an IP address in a timespan execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeRequestsFromIpInTimespanRule(executeRuleRequest) {
-    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+  async executeRequestsFromIpInTimespanRule(executeRuleRequest) {
+    let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
     let splunkSearchParams = [
       executeRuleRequest.IpAddress,
       'now()',
@@ -194,7 +194,7 @@ module.exports = class RuleService {
       'json'
     );
 
-    let splunkSearchResponse = this._splunkClient.search(splunkSearchRequest);
+    let splunkSearchResponse = await this._splunkClient.search(splunkSearchRequest);
 
     let rulePassed = splunkSearchResponse.Count <= rule.ThresholdCount;
     let ruleScore = !rulePassed ? rule.Score : 0;
@@ -208,26 +208,26 @@ module.exports = class RuleService {
    * @param {Models.Rules.ExecuteScoreThresholdRuleRequest} executeRuleRequest - The score threshold execution request object.
    * @returns {Models.Rules.ExecuteRuleResponse}
    */
-  executeScoreThresholdRule(executeRuleRequest) {
-    let rule = this._ruleRepository.selectById(executeRuleRequest.RuleId);
+  async executeScoreThresholdRule(executeRuleRequest) {
+    let rule = await this._ruleRepository.selectById(executeRuleRequest.RuleId);
 
     let ruleScore = 0;
     for(let i = 0; i < rule.ChildRules.length; i++) {
       if (rule.ChildRules[i].Type == Models.Rules.RuleType.DIFFERENT_EMAIL) {
         let ruleRequest = new Models.Rules.ExecuteDifferentEmailRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.ExpectedEmail, executeRuleRequest.ActualEmail);
-        let ruleResponse = this.executeDifferentEmailRule(ruleRequest);
+        let ruleResponse = await this.executeDifferentEmailRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
       } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.SOURCE_IP) {
         let ruleRequest = new Models.Rules.ExecuteSourceIpRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.SourceIp);
-        let ruleResponse = this.executeSourceIpRule(ruleRequest);
+        let ruleResponse = await this.executeSourceIpRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
       } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.ORDERS_CREATED) {
         let ruleRequest = new Models.Rules.ExecuteOrdersCreatedInTimespanRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.AccountId, executeRuleRequest.OrderId);
-        let ruleResponse = this.executeOrdersCreatedInTimespanRule(ruleRequest);
+        let ruleResponse = await this.executeOrdersCreatedInTimespanRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
       } else if (rule.ChildRules[i].Type == Models.Rules.RuleType.REQUESTS_FROM_IP) {
         let ruleRequest = new Models.Rules.ExecuteRequestsFromIpInTimespanRuleRequest(rule.ChildRules[i].Id, executeRuleRequest.SourceIp, executeRuleRequest.AccountId);
-        let ruleResponse = this.executeRequestsFromIpInTimespanRule(ruleRequest);
+        let ruleResponse = await this.executeRequestsFromIpInTimespanRule(ruleRequest);
         ruleScore += ruleResponse.RuleScore;
       } else {
         throw 'Unsupported rule type';

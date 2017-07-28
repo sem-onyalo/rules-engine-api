@@ -26,13 +26,13 @@ describe('NetworkService', () => {
       expect(networkService.isEmailBlocked).to.be.a('function');
     });
 
-    it('should get block item from repository and return true', () => {
+    it('should get block item from repository and return true', async () => {
       let selectBlockItemByTypeAndValueStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
-        .returns(new Models.BlockItem(123, Models.BlockItemType.Email, 'jdoe@nomail.com'));
+        .returns(Promise.resolve(new Models.BlockItem(123, Models.BlockItemType.Email, 'jdoe@nomail.com')));
 
       let email = 'jdoe@nomail.com';
-      let actual = networkService.isEmailBlocked(email);
+      let actual = await networkService.isEmailBlocked(email);
 
       selectBlockItemByTypeAndValueStub.restore();
 
@@ -41,13 +41,13 @@ describe('NetworkService', () => {
       assert.isTrue(actual, 'isEmailBlocked() did not return expected value of true');
     });
 
-    it('should get null from repository and return false', () => {
+    it('should get null from repository and return false', async () => {
       let selectBlockItemByTypeAndValueStub = sinon
         .stub(blockItemRepository, 'selectByTypeAndValue')
-        .returns(null);
+        .returns(Promise.resolve(null));
 
       let email = 'jdoe@nomail.com';
-      let actual = networkService.isEmailBlocked(email);
+      let actual = await networkService.isEmailBlocked(email);
 
       selectBlockItemByTypeAndValueStub.restore();
 

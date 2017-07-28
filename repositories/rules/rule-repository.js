@@ -29,8 +29,17 @@ module.exports = class RuleRepository {
     this._dbContext = dbContext;
   }
 
-  selectById(id) {
-    
+  async selectById(id) {
+    let query = selectRuleSql + 'where r.ID = :id';
+    let params = { id: id };
+    let result = await this._dbContext.query(query, params);
+
+    let rule = null;
+    if (result !== null && result.rows.length > 0) {
+      rule = this.getRuleFromDataSet(result);
+    }
+
+    return null;
   }
 
   getRuleFromDataSet(dataSet, colNamePrefix = '', rowIndex = 0) {
