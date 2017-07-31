@@ -8,7 +8,7 @@ module.exports = class BlockItemRepository {
   }
 
   async selectByTypeAndValue(type, value) {
-    let query = 'select id, type_id, value from BLACKLIST_VALUES where type_id = :type and value = :value';
+    let query = 'select ID, TYPE_ID, VALUE from BLACKLIST_VALUES where TYPE_ID = :type and VALUE = :value';
     let params = { type: type, value: value };
     let result = await this._dbContext.query(query, params);
 
