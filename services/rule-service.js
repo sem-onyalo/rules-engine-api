@@ -27,6 +27,30 @@ module.exports = class RuleService {
   }
 
   /**
+   * Represents a request to get a collection of rule sets.
+   * @name getRuleSets
+   * @returns {Array} An array of {Models.Rules.RuleSet} objects.
+   */
+  async getRuleSets() {
+    return await this._ruleSetRepository.selectAll();
+  }
+
+  /**
+   * Represents a request to create a rule set.
+   * @name createRuleSet
+   * @param {Models.Rules.CreateRuleSetRequest} createRuleSetRequest - The rule set creation object.
+   * @returns {Models.Rules.RuleSet} The created rule set.
+   */
+  async createRuleSet(createRuleSetRequest) {
+    if ([undefined, null, ''].indexOf(createRuleSetRequest.Name) >= 0 || (createRuleSetRequest.Name && createRuleSetRequest.Name.trim() === '')) {
+      throw 'The rule set name cannot be empty';
+    }
+
+    let ruleSet = new Models.Rules.RuleSet(0, createRuleSetRequest.Name, undefined, createRuleSetRequest.StopProcessingOnFail);
+    return await this._ruleSetRepository.insert(ruleSet);
+  }
+
+  /**
    * Represents a request to execute a rule set.
    * @name executeRuleSet
    * @param {Models.Rules.ExecuteRuleSetRequest} executeRuleSetRequest - The rule set execution object.

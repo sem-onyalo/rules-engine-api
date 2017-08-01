@@ -22,15 +22,9 @@ describe('RuleSetRepository', () => {
     ruleSetRepository = new RuleSetRepository(dbContext);
   });
 
-  describe('selectById(id)', () => {
+  describe('selectById(args)', () => {
     it('should export function', () => {
       expect(ruleSetRepository.selectById).to.be.a('function');
-    });
-  });
-
-  describe('selectByRuleSetId(args)', () => {
-    it('should export function', () => {
-      expect(ruleSetRepository.selectByRuleSetId).to.be.a('function');
     });
 
     it('should have an array of rules', async () => {
@@ -55,8 +49,76 @@ describe('RuleSetRepository', () => {
       let dbContextStub = sinon.stub(dbContext, 'query')
       .returns(Promise.resolve(dataSet));
 
-      let result = await ruleSetRepository.selectByRuleSetId(1);
+      let result = await ruleSetRepository.selectById(1);
       assert.deepStrictEqual(result, expectedRuleSet);
+    });
+  });
+
+  describe('selectAll()', () => {
+    it('should export function', () => {
+      expect(ruleSetRepository.selectAll).to.be.a('function');
+    });
+
+    it('should return an array of rule sets', async () => {
+      let query =  'select ID, NAME from RULESET';
+      let queryParams = {};
+
+      let expectedRuleSets = [
+        new Models.Rules.RuleSet(1, 'Rule Set 1'),
+        new Models.Rules.RuleSet(2, 'Rule Set 2'),
+        new Models.Rules.RuleSet(3, 'Rule Set 3')
+      ];
+
+      let dbContextStub = sinon
+        .stub(dbContext, 'query')
+        .returns(Promise.resolve({
+          rows: [ [ 1, 'Rule Set 1' ], [ 2, 'Rule Set 2' ], [ 3, 'Rule Set 3' ] ],
+          metaData: [ { name: 'ID' }, { name: 'NAME' } ]
+        }));
+
+      let actual = await ruleSetRepository.selectAll();
+
+      sinon.assert.calledOnce(dbContextStub);
+      sinon.assert.calledWith(dbContextStub, query, queryParams);
+      assert.deepStrictEqual(actual, expectedRuleSets);
+    });
+  });
+
+  describe('insert(ruleSet)', () => {
+    it('should export function', () => {
+      expect(ruleSetRepository.insert).to.be.a('function');
+    });
+
+    it('should create a new rule set record via the db context', async () => {
+      let dbContextStub = sinon
+        .stub(dbContext, 'query');
+
+      let data = [[true,1],[false,0]];
+      for (let i = 0; i < data.length; i++) {
+        let ruleSet = new Models.Rules.RuleSet(0, 'Rule Set 4', undefined, data[i][0]);
+        let query = 'insert into RULESET (ID, NAME, STOPPROCESSINGONFAIL) values (RULESET_ID_SEQ.nextval, :name, :stop_on_fail) returning ID into :inserted_id';
+        let queryParams = { name: 'Rule Set 4', stop_on_fail: data[i][1], inserted_id: 0 };
+
+        await ruleSetRepository.insert(ruleSet);
+
+        sinon.assert.calledWith(dbContextStub, query, queryParams);
+      }
+    });
+
+    it('should return the created rule set', async () => {
+      let ruleSet = new Models.Rules.RuleSet(0, 'Rule Set 4', undefined, true);
+
+      let dbContextStub = sinon
+        .stub(dbContext, 'query')
+        .returns(Promise.resolve({
+          outBinds: { inserted_id: [4] },
+          metaData: [ { name: 'ID' } ]
+        }));
+
+      let expected = new Models.Rules.RuleSet(4, 'Rule Set 4', undefined, true);
+      let actual = await ruleSetRepository.insert(ruleSet);
+
+      assert.deepStrictEqual(actual, expected, 'The returned rule set was not the expected value');
     });
   });
 });

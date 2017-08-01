@@ -51,7 +51,66 @@ describe('RuleService', () => {
 
   afterEach(function () {
     emailServiceStub.restore();
-  })
+  });
+
+  describe('getRuleSets()', () => {
+    let ruleSets = [
+      new Models.Rules.RuleSet(1, 'Rule Set 1'),
+      new Models.Rules.RuleSet(2, 'Rule Set 2'),
+      new Models.Rules.RuleSet(3, 'Rule Set 3')
+    ];
+
+    it('should export function', () => {
+      expect(ruleService.getRuleSets).to.be.a('function');
+    });
+
+    it('should call the rule repository to get a collections of rule set objects', async () => {
+      let getRuleSetsStub = sinon
+        .stub(ruleSetRepository, 'selectAll')
+        .returns(Promise.resolve(ruleSets));
+
+      let actual = await ruleService.getRuleSets();
+
+      sinon.assert.calledOnce(getRuleSetsStub);
+      assert.deepStrictEqual(actual, ruleSets, 'Returned rule sets was not the expected value');
+    });
+  });
+
+  describe('createRuleSet(createRuleSetRequest)', () => {
+    it('should export function', () => {
+      expect(ruleService.createRuleSet).to.be.a('function');
+    });
+
+    it('should throw an exception if the name is empty', async () => {
+      let promises = [];
+      let data = [undefined, null, '', '  '];
+      let request = new Models.Rules.CreateRuleSetRequest();
+
+      for (let i = 0; i < data.length; i++) {
+        request.Name = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRuleSet(request), 'The rule set name cannot be empty')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should call the rule repository to create a new rule set', async () => {
+      let expected = new Models.Rules.RuleSet(4, 'Rule Set 4', undefined, true);
+      let expectedNew = new Models.Rules.RuleSet(0, 'Rule Set 4', undefined, true);
+      let insertRuleSetStub = sinon
+        .stub(ruleSetRepository, 'insert')
+        .returns(Promise.resolve(expected));
+
+      let request = new Models.Rules.CreateRuleSetRequest('Rule Set 4', true);
+
+      let actual = await ruleService.createRuleSet(request);
+      sinon.assert.calledWith(insertRuleSetStub, expectedNew);
+      assert.deepStrictEqual(actual, expected, 'The returned rule set was not the expected value');
+    });
+  });
 
   describe('executeRule(executeRuleRequest)', () => {
     it('should export function', () => {

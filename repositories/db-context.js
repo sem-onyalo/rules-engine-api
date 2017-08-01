@@ -20,7 +20,10 @@ module.exports = class DbContext {
 
   async query(queryString, queryParams) {
     let conn = await this.openConn();
-    let result = await conn.execute(queryString, queryParams);
+    if ('inserted_id' in queryParams) {
+      queryParams.inserted_id = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
+    }
+    let result = await conn.execute(queryString, queryParams, { autoCommit: true }); // TODO get auto commit value as parameter if transactions are needed
     await this.closeConn(conn);
     return result;
   }

@@ -39,7 +39,7 @@ module.exports = class RuleRepository {
       rule = this.getRuleFromDataSet(result);
     }
 
-    return null;
+    return rule;
   }
 
   getRuleFromDataSet(dataSet, colNamePrefix = '', rowIndex = 0) {

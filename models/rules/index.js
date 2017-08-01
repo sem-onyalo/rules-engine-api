@@ -1,5 +1,6 @@
 "use strict";
 
+const CreateRuleSetRequest = require('./create-rule-set-request');
 const ExecuteAccountLockedRuleRequest = require('./execute-account-locked-rule-request');
 const ExecuteDifferentEmailRuleRequest = require('./execute-different-email-rule-request');
 const ExecuteEmailBlocklistRuleRequest = require('./execute-email-blocklist-rule-request');
@@ -20,6 +21,7 @@ const RuleSourceIp = require('./rule-source-ip');
 const RuleType = require('./rule-type');
 
 module.exports = {
+  CreateRuleSetRequest,
   ExecuteAccountLockedRuleRequest,
   ExecuteDifferentEmailRuleRequest,
   ExecuteEmailBlocklistRuleRequest,
