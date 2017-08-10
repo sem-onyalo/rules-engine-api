@@ -11,6 +11,7 @@ const selectRuleSql = 'select r.ID, r.PARENT_RULE_ID, r.TYPE_RULE, r.SCORE, r.EM
   + '    , CHILD_RULE.ID as CHILD_RULE_ID, CHILD_RULE.TYPE_RULE as CHILD_RULE_TYPE_RULE, CHILD_RULE.SCORE as CHILD_RULE_SCORE '
   + '    , CHILD_RULE.EMAIL_ON_FAIL as CHILD_RULE_EMAIL_ON_FAIL, CHILD_RULE.EMAILTO AS CHILD_RULE_EMAILTO, CHILD_RULE.EMAILSUBJECT AS CHILD_RULE_EMAILSUBJECT '
   + '    , CHILD_RULE.EMAILBODY AS CHILD_RULE_EMAILBODY '
+  + 'from RULE r '
   + 'left join RULE_FREQUENCY rf on rf.RULE_ID = r.ID '
   + 'left join RULE_ACCOUNT_FREQUENCY raf on raf.RULE_ID = r.ID '
   + 'left join RULE_COUNTRY_CODE rcc on rcc.RULE_ID = r.ID '
@@ -21,8 +22,7 @@ const selectRuleSql = 'select r.ID, r.PARENT_RULE_ID, r.TYPE_RULE, r.SCORE, r.EM
   + '        , re.EMAILTO, re.EMAILSUBJECT, re.EMAILBODY '
   + '    from RULE r '
   + '    left join RULEEMAIL re on re.RULE_ID = r.ID '
-  + ') CHILD_RULE on CHILD_RULE.PARENT_RULE_ID = r.ID '
-  + 'from RULE r ';
+  + ') CHILD_RULE on CHILD_RULE.PARENT_RULE_ID = r.ID ';
 
 module.exports = class RuleRepository {
   constructor(dbContext) {
