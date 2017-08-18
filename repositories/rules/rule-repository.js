@@ -66,6 +66,21 @@ module.exports = class RuleRepository {
     }
   }
 
+  async update(rule) {
+    let query = 'update RULE set '
+      + 'PARENT_RULE_ID = :parentRuleId '
+      + ', TYPE_RULE = :ruleType '
+      + ', SCORE = :ruleScore '
+      + ', EMAIL_ON_FAIL = :emailOnFail '
+      + 'where ID = :ruleId';
+    let params = { parentRuleId: rule.ParentId, ruleType: rule.Type, ruleScore: rule.Score, emailOnFail: rule.EmailOnFail ? 1 : 0, ruleId: rule.Id };
+    let result = await this._dbContext.query(query, params);
+
+    if (result && result.rowsAffected > 0) {
+      return rule;
+    }
+  }
+
   getRuleFromDataSet(dataSet, colNamePrefix = '', rowIndex = 0) {
     let ruleIdColName = colNamePrefix + 'ID';
     let ruleTypeColName = colNamePrefix + 'TYPE_RULE';

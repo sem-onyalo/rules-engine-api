@@ -201,12 +201,131 @@ describe('RuleService', () => {
       let expectedRuleSetId = 9;
       let expectedRuleArg = new Models.Rules.Rule(0, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
       expectedRuleArg.ParentId = 1;
-      let insertRuleStub = sinon.stub(ruleRepository, 'insert');
+      let expectedRule = new Models.Rules.Rule(123, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
+      let insertRuleStub = sinon.stub(ruleRepository, 'insert').returns(expectedRule);
 
       let request = new Models.Rules.CreateRuleRequest(expectedRuleSetId, 1, Models.Rules.RuleType.ACCOUNT_LOCKED, 5.5, false);
-      await ruleService.createRule(request);
+      let actualRule = await ruleService.createRule(request);
       sinon.assert.calledOnce(insertRuleStub);
       sinon.assert.calledWith(insertRuleStub, expectedRuleSetId, expectedRuleArg);
+      expect(actualRule).to.eql(expectedRule);
+    });
+
+    it('should throw exception if RuleRepository.insert returns undefined', async () => {
+      let expectedRuleSetId = 9;
+      let expectedRuleArg = new Models.Rules.Rule(0, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
+      expectedRuleArg.ParentId = 1;
+      let insertRuleStub = sinon.stub(ruleRepository, 'insert').returns(undefined);
+
+      let request = new Models.Rules.CreateRuleRequest(expectedRuleSetId, 1, Models.Rules.RuleType.ACCOUNT_LOCKED, 5.5, false);
+      return assert.isRejected(ruleService.createRule(request), 'Error creating rule');
+    });
+  });
+
+  describe('updateRule(updateRuleRequest)', () => {
+    it('should export function', () => {
+      expect(ruleService.updateRule).to.be.a('function');
+    });
+
+    it('should throw an exception if the rule id is not an integer', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.UpdateRuleRequest();
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleId = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.updateRule(request), 'The rule id is not a valid integer')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an excpetion if the parent rule id is not an integer', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.UpdateRuleRequest(9);
+
+      for (let i = 0; i < data.length; i++) {
+        request.ParentRuleId = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.updateRule(request), 'The parent rule id is not a valid integer')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if the rule type is not an integer or is not a valid type', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R', 0, 8];
+      let request = new Models.Rules.UpdateRuleRequest(9, 1);
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleType = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.updateRule(request), 'The rule type is not a valid integer or is not a valid type')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if the rule score is not a number', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.UpdateRuleRequest(9, 1, 2);
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleScore = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.updateRule(request), 'The rule score is not a valid number')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if email on fail is not a boolean', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R', 0, 2.5];
+      let request = new Models.Rules.UpdateRuleRequest(9, 1, 2, 5.5);
+
+      for (let i = 0; i < data.length; i++) {
+        request.EmailOnFail = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.updateRule(request), 'The email on fail value is not a valid boolean')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should call the rule repository to update a rule', async () => {
+      let expectedRule = new Models.Rules.Rule(123, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
+      expectedRule.ParentId = 1;
+      let updateRuleStub = sinon.stub(ruleRepository, 'update').returns(expectedRule);
+
+      let request = new Models.Rules.UpdateRuleRequest(123, 1, Models.Rules.RuleType.ACCOUNT_LOCKED, 5.5, false);
+      let actualRule = await ruleService.updateRule(request);
+      sinon.assert.calledOnce(updateRuleStub);
+      sinon.assert.calledWith(updateRuleStub, expectedRule);
+      expect(actualRule).to.eql(expectedRule);
+    });
+
+    it('sholud throw an exception if RuleRepository.updateRule returns undefined', async () => {
+      let expectedRuleArg = new Models.Rules.Rule(123, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
+      expectedRuleArg.ParentId = 1;
+      let updateRuleStub = sinon.stub(ruleRepository, 'update').returns(undefined);
+
+      let request = new Models.Rules.UpdateRuleRequest(123, 1, Models.Rules.RuleType.ACCOUNT_LOCKED, 5.5, false);
+      return assert.isRejected(ruleService.updateRule(request), 'Error updating rule or rule does not exist');
     });
   });
 

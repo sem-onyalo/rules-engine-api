@@ -58,37 +58,58 @@ module.exports = class RuleService {
    * @returns {Models.Rules.Rule} The created rule.
    */
   async createRule(createRuleRequest) {
-    this.validateCreateRuleRequest(createRuleRequest);
-    let rule = new Models.Rules.Rule(0, createRuleRequest.RuleScore, createRuleRequest.RuleType, createRuleRequest.EmailOnFail);
-    rule.ParentId = createRuleRequest.ParentRuleId;
-    return await this._ruleRepository.insert(createRuleRequest.RuleSetId, rule);
-  }
-
-  /**
-   * Validates a request to create a rule.
-   * @name validateCreateRuleRequest
-   * @param {Models.Rules.CreateRuleRequest} createRuleRequest - The rule request creation object.
-   * @throws An exception if validation fails.
-   */
-  validateCreateRuleRequest(createRuleRequest) {
     if (!Number.isInteger(createRuleRequest.RuleSetId)) {
       throw 'The rule set id is not a valid integer';
     }
 
-    if (!Number.isInteger(createRuleRequest.ParentRuleId)) {
+    this.validateCreateOrUpdateRuleRequest(createRuleRequest);
+    let rule = new Models.Rules.Rule(0, createRuleRequest.RuleScore, createRuleRequest.RuleType, createRuleRequest.EmailOnFail);
+    rule.ParentId = createRuleRequest.ParentRuleId;
+    rule = await this._ruleRepository.insert(createRuleRequest.RuleSetId, rule);
+    if (rule) return rule;
+    else throw 'Error creating rule';
+  }
+
+  /**
+   * Represents a request to update a rule.
+   * @name updateRule
+   * @param {Models.Rules.UpdateRuleRequest} updateRuleRequest - The update rule request object.
+   * @returns {Models.Rules.Rule} The updated rule.
+   */
+  async updateRule(updateRuleRequest) {
+    if (!Number.isInteger(parseFloat(updateRuleRequest.RuleId))) {
+      throw 'The rule id is not a valid integer';
+    }
+
+    this.validateCreateOrUpdateRuleRequest(updateRuleRequest);
+    let rule = new Models.Rules.Rule(updateRuleRequest.RuleId, updateRuleRequest.RuleScore, updateRuleRequest.RuleType, updateRuleRequest.EmailOnFail);
+    rule.ParentId = updateRuleRequest.ParentRuleId;
+    rule = await this._ruleRepository.update(rule);
+    if (rule) return rule;
+    else throw 'Error updating rule or rule does not exist';
+  }
+
+  /**
+   * Validates a request to create or update a rule.
+   * @name validateCreateOrUpdateRuleRequest
+   * @param {Object} request - The request object.
+   * @throws An exception if validation fails.
+   */
+  validateCreateOrUpdateRuleRequest(request) {
+    if (!Number.isInteger(request.ParentRuleId)) {
       throw 'The parent rule id is not a valid integer';
     }
 
-    if (!Number.isInteger(createRuleRequest.RuleType)
-      || (Number.isInteger(createRuleRequest.RuleType) && (createRuleRequest.RuleType <= RuleType.NONE || createRuleRequest.RuleType > RuleType.REQUESTS_FROM_IP))) {
+    if (!Number.isInteger(request.RuleType)
+      || (Number.isInteger(request.RuleType) && (request.RuleType <= RuleType.NONE || request.RuleType > RuleType.REQUESTS_FROM_IP))) {
       throw 'The rule type is not a valid integer or is not a valid type';
     }
 
-    if (Number.isNaN(parseFloat(createRuleRequest.RuleScore)) || !Number.isFinite(createRuleRequest.RuleScore)) {
+    if (Number.isNaN(parseFloat(request.RuleScore)) || !Number.isFinite(request.RuleScore)) {
       throw 'The rule score is not a valid number';
     }
 
-    if (typeof createRuleRequest.EmailOnFail !== 'boolean') {
+    if (typeof request.EmailOnFail !== 'boolean') {
       throw 'The email on fail value is not a valid boolean';
     }
   }

@@ -20,6 +20,7 @@ const RuleScoreThreshold = require('./rule-score-threshold');
 const RuleSet = require('./rule-set');
 const RuleSourceIp = require('./rule-source-ip');
 const RuleType = require('./rule-type');
+const UpdateRuleRequest = require('./update-rule-request');
 
 module.exports = {
   CreateRuleRequest,
@@ -41,5 +42,6 @@ module.exports = {
   RuleScoreThreshold,
   RuleSet,
   RuleSourceIp,
-  RuleType
+  RuleType,
+  UpdateRuleRequest
 }

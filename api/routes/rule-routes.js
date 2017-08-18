@@ -5,4 +5,7 @@ module.exports = function(app) {
 
   app.route('/rules')
     .post(controller.createRule);
+
+  app.route('/rules/:ruleId')
+    .put(controller.updateRule);
 }
