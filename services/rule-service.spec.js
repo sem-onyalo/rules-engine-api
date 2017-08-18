@@ -112,6 +112,104 @@ describe('RuleService', () => {
     });
   });
 
+  describe('createRule(createRuleRequest)', () => {
+    it('should export function', () => {
+      expect(ruleService.createRule).to.be.a('function');
+    });
+
+    it('should throw an exception if the rule set id is not an integer', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.CreateRuleRequest();
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleSetId = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRule(request), 'The rule set id is not a valid integer')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an excpetion if the parent rule id is not an integer', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.CreateRuleRequest(9);
+
+      for (let i = 0; i < data.length; i++) {
+        request.ParentRuleId = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRule(request), 'The parent rule id is not a valid integer')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if the rule type is not an integer or is not a valid type', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R', 0, 8];
+      let request = new Models.Rules.CreateRuleRequest(9, 1);
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleType = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRule(request), 'The rule type is not a valid integer or is not a valid type')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if the rule score is not a number', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R'];
+      let request = new Models.Rules.CreateRuleRequest(9, 1, 2);
+
+      for (let i = 0; i < data.length; i++) {
+        request.RuleScore = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRule(request), 'The rule score is not a valid number')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should throw an exception if email on fail is not a boolean', () => {
+      let promises = [];
+      let data = [undefined, null, '', '  ', 'R', 0, 2.5];
+      let request = new Models.Rules.CreateRuleRequest(9, 1, 2, 5.5);
+
+      for (let i = 0; i < data.length; i++) {
+        request.EmailOnFail = data[i];
+
+        promises.push(
+          assert.isRejected(ruleService.createRule(request), 'The email on fail value is not a valid boolean')
+        );
+      }
+
+      return Promise.all(promises);
+    });
+
+    it('should call the rule repository to create a new rule', async () => {
+      let expectedRuleSetId = 9;
+      let expectedRuleArg = new Models.Rules.Rule(0, 5.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false);
+      expectedRuleArg.ParentId = 1;
+      let insertRuleStub = sinon.stub(ruleRepository, 'insert');
+
+      let request = new Models.Rules.CreateRuleRequest(expectedRuleSetId, 1, Models.Rules.RuleType.ACCOUNT_LOCKED, 5.5, false);
+      await ruleService.createRule(request);
+      sinon.assert.calledOnce(insertRuleStub);
+      sinon.assert.calledWith(insertRuleStub, expectedRuleSetId, expectedRuleArg);
+    });
+  });
+
   describe('executeRule(executeRuleRequest)', () => {
     it('should export function', () => {
       expect(ruleService.executeRule).to.be.a('function');

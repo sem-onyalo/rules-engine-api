@@ -1,6 +1,7 @@
 "use strict";
 
 const Models = require('../models');
+const RuleType = Models.Rules.RuleType;
 
 module.exports = class RuleService {
   /**
@@ -48,6 +49,48 @@ module.exports = class RuleService {
 
     let ruleSet = new Models.Rules.RuleSet(0, createRuleSetRequest.Name, undefined, createRuleSetRequest.StopProcessingOnFail);
     return await this._ruleSetRepository.insert(ruleSet);
+  }
+
+  /**
+   * Represents a request to create a rule.
+   * @name createRule
+   * @param {Models.Rules.CreateRuleRequest} createRuleRequest - The rule request creation object.
+   * @returns {Models.Rules.Rule} The created rule.
+   */
+  async createRule(createRuleRequest) {
+    this.validateCreateRuleRequest(createRuleRequest);
+    let rule = new Models.Rules.Rule(0, createRuleRequest.RuleScore, createRuleRequest.RuleType, createRuleRequest.EmailOnFail);
+    rule.ParentId = createRuleRequest.ParentRuleId;
+    return await this._ruleRepository.insert(createRuleRequest.RuleSetId, rule);
+  }
+
+  /**
+   * Validates a request to create a rule.
+   * @name validateCreateRuleRequest
+   * @param {Models.Rules.CreateRuleRequest} createRuleRequest - The rule request creation object.
+   * @throws An exception if validation fails.
+   */
+  validateCreateRuleRequest(createRuleRequest) {
+    if (!Number.isInteger(createRuleRequest.RuleSetId)) {
+      throw 'The rule set id is not a valid integer';
+    }
+
+    if (!Number.isInteger(createRuleRequest.ParentRuleId)) {
+      throw 'The parent rule id is not a valid integer';
+    }
+
+    if (!Number.isInteger(createRuleRequest.RuleType)
+      || (Number.isInteger(createRuleRequest.RuleType) && (createRuleRequest.RuleType <= RuleType.NONE || createRuleRequest.RuleType > RuleType.REQUESTS_FROM_IP))) {
+      throw 'The rule type is not a valid integer or is not a valid type';
+    }
+
+    if (Number.isNaN(parseFloat(createRuleRequest.RuleScore)) || !Number.isFinite(createRuleRequest.RuleScore)) {
+      throw 'The rule score is not a valid number';
+    }
+
+    if (typeof createRuleRequest.EmailOnFail !== 'boolean') {
+      throw 'The email on fail value is not a valid boolean';
+    }
   }
 
   /**

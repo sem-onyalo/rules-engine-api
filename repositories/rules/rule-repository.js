@@ -42,6 +42,30 @@ module.exports = class RuleRepository {
     return rule;
   }
 
+  async insert(ruleSetId, rule) {
+    let query = 'insert into RULE (ID, PARENT_RULE_ID, TYPE_RULE, SCORE, EMAIL_ON_FAIL) '
+      + 'values (RULE_ID_SEQ.nextval, :parentRuleId, :ruleType, :ruleScore, :emailOnFail) '
+      + 'returning ID into :inserted_id';
+    let params = { parentRuleId: rule.ParentId, ruleType: rule.Type, ruleScore: rule.Score, emailOnFail: rule.EmailOnFail ? 1 : 0, inserted_id: 0 };
+    let result = await this._dbContext.query(query, params);
+
+    if (result && result.outBinds.inserted_id.length > 0) {
+      let ruleId = result.outBinds.inserted_id[0];
+
+      query = 'insert into RULESET_RULE (RULESET_ID, RULE_ID, RULE_ORDER) '
+        + 'select :ruleSetId, :ruleId, coalesce(max(RULE_ORDER), 0) + 1 '
+        + 'from RULESET_RULE '
+        + 'where RULESET_ID  = :ruleSetId';
+      params = { ruleId: ruleId, ruleSetId: ruleSetId };
+      result = await this._dbContext.query(query, params);
+
+      if (result && result.rowsAffected > 0) {
+        rule.Id = ruleId;
+        return rule;
+      }
+    }
+  }
+
   getRuleFromDataSet(dataSet, colNamePrefix = '', rowIndex = 0) {
     let ruleIdColName = colNamePrefix + 'ID';
     let ruleTypeColName = colNamePrefix + 'TYPE_RULE';

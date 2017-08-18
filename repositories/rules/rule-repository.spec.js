@@ -26,6 +26,12 @@ describe('RuleRepository', () => {
     });
   });
 
+  describe('insert(ruleSetId, rule)', () => {
+    it('should export function', () => {
+      expect(ruleRepository.insert).to.be.a('function');
+    });
+  });
+
   describe('getRuleFromDataSet(args)', () => {
     it('should export function', () => {
       expect(ruleRepository.getRuleFromDataSet).to.be.a('function');

@@ -13,8 +13,9 @@ module.exports = class Rule extends DsObject {
    * @param {string} emailTo - The email recipient(s).
    * @param {string} emailSubject - The email subject.
    * @param {string} emailBody - The email body.
+   * @param {integer} parentId - The unique identifier of this rule's parent rule, or 0 if no parent rule.
    */
-  constructor(id, score, type, emailOnFail, emailTo, emailSubject, emailBody) {
+  constructor(id, score, type, emailOnFail, emailTo, emailSubject, emailBody, parentId) {
     super(id);
     this.Type = type;
     this.Score = score;
@@ -22,5 +23,6 @@ module.exports = class Rule extends DsObject {
     this.EmailTo = emailTo;
     this.EmailSubject = emailSubject;
     this.EmailBody = emailBody;
+    this.ParentId = parentId;
   }
 }

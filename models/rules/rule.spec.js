@@ -22,10 +22,11 @@ describe('Rule', () => {
     expect(rule).to.have.property('EmailTo');
     expect(rule).to.have.property('EmailSubject');
     expect(rule).to.have.property('EmailBody');
+    expect(rule).to.have.property('ParentId');
   });
 
   it('should set the defined properties on initialization', () => {
-    let rule = new Rule(123, 2.5, RuleType.NONE, false, 'fraudteam@nomail.com', 'Rule Failure', 'A rule failed');
+    let rule = new Rule(123, 2.5, RuleType.NONE, false, 'fraudteam@nomail.com', 'Rule Failure', 'A rule failed', 10);
     assert.strictEqual(rule.Id, 123, 'Id was not set to expected value');
     assert.strictEqual(rule.Type, RuleType.NONE, 'Type was not set to expected value');
     assert.strictEqual(rule.Score, 2.5, 'Score was not set to expected value');
@@ -33,5 +34,6 @@ describe('Rule', () => {
     assert.strictEqual(rule.EmailTo, 'fraudteam@nomail.com', 'EmailTo was not set to expected value');
     assert.strictEqual(rule.EmailSubject, 'Rule Failure', 'EmailSubject was not set to expected value');
     assert.strictEqual(rule.EmailBody, 'A rule failed', 'EmailBody was not set to expected value');
+    assert.strictEqual(rule.ParentId, 10, 'ParentId was not set to expected value');
   });
 });
