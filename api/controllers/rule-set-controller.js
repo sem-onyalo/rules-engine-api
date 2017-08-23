@@ -32,6 +32,20 @@ exports.createRuleSet = async (req, res) => {
   }
 }
 
+exports.getRules = async (req, res) => {
+  try {
+    let ruleService = DependencyFactory.resolve(RuleService);
+    let request = new Models.Rules.GetRulesRequest(req.params.ruleSetId);
+    let rules = await ruleService.getRules(request);
+    res.json({ status: 'OK', rules: rules });
+  } catch (ex) {
+    let status = typeof ex === 'string' ? 'Bad Request' : 'Internal Server Error';
+    let message = typeof ex === 'string' ? ex : _unexpectedErrorMessage;
+    if (typeof ex !== 'string') console.log(ex); // TODO log errors to log service
+    res.json({ status: status, message: message });
+  }
+}
+
 exports.executeRuleSet = async (req, res) => {
   try {
     let request = ExecuteRuleSetRequest(req);

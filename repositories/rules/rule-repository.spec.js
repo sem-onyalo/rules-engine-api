@@ -26,6 +26,12 @@ describe('RuleRepository', () => {
     });
   });
 
+  describe('selectByRuleSetId(id)', () => {
+    it('should export function', () => {
+      expect(ruleRepository.selectByRuleSetId).to.be.a('function');
+    });
+  });
+
   describe('insert(ruleSetId, rule)', () => {
     it('should export function', () => {
       expect(ruleRepository.insert).to.be.a('function');
@@ -46,7 +52,7 @@ describe('RuleRepository', () => {
     it('should return null if unsupported type', () => {
       let ruleType = 0;
       let dataSet = {
-        rows: [ [ 123, 0, ruleType, 10, false ] ],
+        rows: [ [ 123, 0, ruleType, 10, 0 ] ],
         metaData: [ { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' } ]
       };
 
@@ -64,14 +70,37 @@ describe('RuleRepository', () => {
 
       for (let i = 0; i < types.length; i++) {
         let dataSet = {
-          rows: [ [ 123, 0, types[i], 10, false, emailTo, emailSubject, emailBody ] ],
+          rows: [ [ 123, 0, types[i], 10, 0, emailTo, emailSubject, emailBody ] ],
           metaData: [
             { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' },
             { name: 'EMAILTO' }, { name: 'EMAILSUBJECT' }, { name: 'EMAILBODY' }
           ]
         };
 
-        let expectedRule = new Models.Rules.Rule(123, 10, types[i], false, emailTo, emailSubject, emailBody);
+        let expectedRule = new Models.Rules.Rule(123, 10, types[i], false);
+        let rule = ruleRepository.getRuleFromDataSet(dataSet);
+
+        assert.deepEqual(rule, expectedRule, 'Returned rule was not expected value for rule type ' + types[i]);
+      }
+    });
+
+    it('should return an instance of Rule with the email properties populated', () => {
+      let types = [
+        Models.Rules.RuleType.ACCOUNT_LOCKED,
+        Models.Rules.RuleType.EMAIL_BLOCKLIST,
+        Models.Rules.RuleType.DIFFERENT_EMAIL
+      ];
+
+      for (let i = 0; i < types.length; i++) {
+        let dataSet = {
+          rows: [ [ 123, 0, types[i], 10, 1, emailTo, emailSubject, emailBody ] ],
+          metaData: [
+            { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' },
+            { name: 'EMAILTO' }, { name: 'EMAILSUBJECT' }, { name: 'EMAILBODY' }
+          ]
+        };
+
+        let expectedRule = new Models.Rules.Rule(123, 10, types[i], true, emailTo, emailSubject, emailBody);
         let rule = ruleRepository.getRuleFromDataSet(dataSet);
 
         assert.deepEqual(rule, expectedRule, 'Returned rule was not expected value for rule type ' + types[i]);
@@ -81,8 +110,8 @@ describe('RuleRepository', () => {
     it('should return an instance of RuleSourceIp', () => {
       let dataSet = {
         rows: [
-          [ 123, 0, Models.Rules.RuleType.SOURCE_IP, 10, false, 'CA', emailTo, emailSubject, emailBody ],
-          [ 123, 0, Models.Rules.RuleType.SOURCE_IP, 10, false, 'US', emailTo, emailSubject, emailBody ]
+          [ 123, 0, Models.Rules.RuleType.SOURCE_IP, 10, 1, 'CA', emailTo, emailSubject, emailBody ],
+          [ 123, 0, Models.Rules.RuleType.SOURCE_IP, 10, 1, 'US', emailTo, emailSubject, emailBody ]
         ],
         metaData: [
           { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' }, { name: 'LIST_COUNTRY_CODE' } ,
@@ -92,7 +121,7 @@ describe('RuleRepository', () => {
 
       let expectedRule = new Models.Rules.RuleSourceIp(123, 10, ['CA', 'US']);
       expectedRule.Type = Models.Rules.RuleType.SOURCE_IP;
-      expectedRule.EmailOnFail = false;
+      expectedRule.EmailOnFail = true;
       expectedRule.EmailTo = emailTo;
       expectedRule.EmailSubject = emailSubject;
       expectedRule.EmailBody = emailBody;
@@ -103,7 +132,7 @@ describe('RuleRepository', () => {
 
     it('should return an instance of RuleFrequency', () => {
       let dataSet = {
-        rows: [ [ 123, 0, Models.Rules.RuleType.ORDERS_CREATED, 10, false, 2, 180, emailTo, emailSubject, emailBody ] ],
+        rows: [ [ 123, 0, Models.Rules.RuleType.ORDERS_CREATED, 10, 1, 2, 180, emailTo, emailSubject, emailBody ] ],
         metaData: [
           { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' },
           { name: 'THRESHOLD_COUNT' }, { name: 'THRESHOLD_MINUTE' }, { name: 'EMAILTO' }, { name: 'EMAILSUBJECT' }, { name: 'EMAILBODY' }
@@ -113,7 +142,7 @@ describe('RuleRepository', () => {
       let ruleThresholdCount = 2, ruleThresholdMin = 180;
       let expectedRule = new Models.Rules.RuleFrequency(123, 10, ruleThresholdCount, ruleThresholdMin);
       expectedRule.Type = Models.Rules.RuleType.ORDERS_CREATED;
-      expectedRule.EmailOnFail = false;
+      expectedRule.EmailOnFail = true;
       expectedRule.EmailTo = emailTo;
       expectedRule.EmailSubject = emailSubject;
       expectedRule.EmailBody = emailBody;
@@ -124,7 +153,7 @@ describe('RuleRepository', () => {
 
     it('should return an instance of RuleAccountFrequency', () => {
       let dataSet = {
-        rows: [ [ 123, 0, Models.Rules.RuleType.REQUESTS_FROM_IP, 10, false, 1, 180, 2, emailTo, emailSubject, emailBody ] ],
+        rows: [ [ 123, 0, Models.Rules.RuleType.REQUESTS_FROM_IP, 10, 1, 1, 180, 2, emailTo, emailSubject, emailBody ] ],
         metaData: [
           { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' },
           { name: 'ACCOUNT_THRESHOLD_COUNT' }, { name: 'ACCOUNT_THRESHOLD_MINUTE' }, { name: 'ACCOUNT_COUNT_THRESHOLD' },
@@ -135,7 +164,7 @@ describe('RuleRepository', () => {
       let ruleThresholdCount = 1, ruleThresholdMin = 180, accountCountThreshold = 2;
       let expectedRule = new Models.Rules.RuleAccountFrequency(123, 10, ruleThresholdCount, ruleThresholdMin, accountCountThreshold);
       expectedRule.Type = Models.Rules.RuleType.REQUESTS_FROM_IP;
-      expectedRule.EmailOnFail = false;
+      expectedRule.EmailOnFail = true;
       expectedRule.EmailTo = emailTo;
       expectedRule.EmailSubject = emailSubject;
       expectedRule.EmailBody = emailBody;
@@ -147,9 +176,9 @@ describe('RuleRepository', () => {
     it('should return an instance of RuleScoreThreshold', () => {
       let dataSet = {
         rows: [
-          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, false, 15, emailTo, emailSubject, emailBody, null, null, null, null ],
-          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, false, 15, emailTo, emailSubject, emailBody, 124, Models.Rules.RuleType.ACCOUNT_LOCKED, 0, false ],
-          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, false, 15, emailTo, emailSubject, emailBody, 125, Models.Rules.RuleType.EMAIL_BLOCKLIST, 1, false ]
+          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, 1, 15, emailTo, emailSubject, emailBody, null, null, null, null ],
+          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, 1, 15, emailTo, emailSubject, emailBody, 124, Models.Rules.RuleType.ACCOUNT_LOCKED, 0, false ],
+          [ 123, 0, Models.Rules.RuleType.SCORE_THRESHOLD, 10, 1, 15, emailTo, emailSubject, emailBody, 125, Models.Rules.RuleType.EMAIL_BLOCKLIST, 1, false ]
         ],
         metaData: [
           { name: 'ID' }, { name: 'PARENT_RULE_ID' }, { name: 'TYPE_RULE' }, { name: 'SCORE' }, { name: 'EMAIL_ON_FAIL' },
@@ -164,7 +193,7 @@ describe('RuleRepository', () => {
         new Models.Rules.Rule(125, 1, Models.Rules.RuleType.EMAIL_BLOCKLIST, false)
       ];
       let expectedRule = new Models.Rules.RuleScoreThreshold(123, Models.Rules.RuleType.SCORE_THRESHOLD, 10, scoreThreshold, childRules);
-      expectedRule.EmailOnFail = false;
+      expectedRule.EmailOnFail = true;
       expectedRule.EmailTo = emailTo;
       expectedRule.EmailSubject = emailSubject;
       expectedRule.EmailBody = emailBody;

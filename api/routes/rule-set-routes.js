@@ -7,6 +7,9 @@ module.exports = function(app) {
     .get(controller.getRuleSets)
     .post(controller.createRuleSet);
 
+  app.route('/rulesets/:ruleSetId/rules')
+    .get(controller.getRules);
+
   app.route('/rulesets/:ruleSetId/execute')
     .get(controller.executeRuleSet);
 

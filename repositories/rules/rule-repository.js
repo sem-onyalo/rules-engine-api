@@ -12,6 +12,8 @@ const selectRuleSql = 'select r.ID, r.PARENT_RULE_ID, r.TYPE_RULE, r.SCORE, r.EM
   + '    , CHILD_RULE.EMAIL_ON_FAIL as CHILD_RULE_EMAIL_ON_FAIL, CHILD_RULE.EMAILTO AS CHILD_RULE_EMAILTO, CHILD_RULE.EMAILSUBJECT AS CHILD_RULE_EMAILSUBJECT '
   + '    , CHILD_RULE.EMAILBODY AS CHILD_RULE_EMAILBODY '
   + 'from RULE r '
+  + 'inner join RULESET_RULE rsr on rsr.RULE_ID = r.ID '
+  + 'inner join RULESET rs on rs.ID = rsr.RULESET_ID '
   + 'left join RULE_FREQUENCY rf on rf.RULE_ID = r.ID '
   + 'left join RULE_ACCOUNT_FREQUENCY raf on raf.RULE_ID = r.ID '
   + 'left join RULE_COUNTRY_CODE rcc on rcc.RULE_ID = r.ID '
@@ -40,6 +42,21 @@ module.exports = class RuleRepository {
     }
 
     return rule;
+  }
+
+  async selectByRuleSetId(id) {
+    let query = selectRuleSql + 'where rs.ID = :id';
+    let params = { id: id };
+    let result = await this._dbContext.query(query, params);
+
+    let rules = [];
+    if (result && result.rows.length > 0) {
+      for (let i = 0; i < result.rows.length; i++) {
+        rules.push(this.getRuleFromDataSet(result, '', i));
+      }
+    }
+
+    return rules;
   }
 
   async insert(ruleSetId, rule) {
@@ -94,7 +111,7 @@ module.exports = class RuleRepository {
     let ruleId = this._dbContext.getValueFromResultSet(dataSet, ruleIdColName, rowIndex);
     let ruleType = this._dbContext.getValueFromResultSet(dataSet, ruleTypeColName, rowIndex);
     let ruleScore = this._dbContext.getValueFromResultSet(dataSet, ruleScoreColName, rowIndex);
-    let ruleEmailOnFail = this._dbContext.getValueFromResultSet(dataSet, ruleEmailOnFailColName, rowIndex);
+    let ruleEmailOnFail = this._dbContext.getValueFromResultSet(dataSet, ruleEmailOnFailColName, rowIndex) === 1;
     let ruleEmailTo = this._dbContext.getValueFromResultSet(dataSet, ruleEmailToColName, rowIndex);
     let ruleEmailSubject = this._dbContext.getValueFromResultSet(dataSet, ruleEmailSubjectColName, rowIndex);
     let ruleEmailBody = this._dbContext.getValueFromResultSet(dataSet, ruleEmailBodyColName, rowIndex);
@@ -103,7 +120,12 @@ module.exports = class RuleRepository {
       case Models.Rules.RuleType.ACCOUNT_LOCKED:
       case Models.Rules.RuleType.EMAIL_BLOCKLIST:
       case Models.Rules.RuleType.DIFFERENT_EMAIL:
-        rule = new Models.Rules.Rule(ruleId, ruleScore, ruleType, ruleEmailOnFail, ruleEmailTo, ruleEmailSubject, ruleEmailBody);
+        rule = new Models.Rules.Rule(ruleId, ruleScore, ruleType, ruleEmailOnFail);
+        if (ruleEmailOnFail) {
+          rule.EmailTo = ruleEmailTo;
+          rule.EmailSubject = ruleEmailSubject;
+          rule.EmailBody = ruleEmailBody;
+        }
         return rule;
 
       case Models.Rules.RuleType.SOURCE_IP:
@@ -112,9 +134,11 @@ module.exports = class RuleRepository {
         rule.Type = ruleType;
         rule.Score = ruleScore;
         rule.EmailOnFail = ruleEmailOnFail;
-        rule.EmailTo = ruleEmailTo;
-        rule.EmailSubject = ruleEmailSubject;
-        rule.EmailBody = ruleEmailBody;
+        if (ruleEmailOnFail) {
+          rule.EmailTo = ruleEmailTo;
+          rule.EmailSubject = ruleEmailSubject;
+          rule.EmailBody = ruleEmailBody;
+        }
         rule.CountryCodes = [];
         for (let i = 0; i < dataSet.rows.length; i++) {
             rule.CountryCodes.push(this._dbContext.getValueFromResultSet(dataSet, 'LIST_COUNTRY_CODE', i));
@@ -127,9 +151,11 @@ module.exports = class RuleRepository {
         rule.Type = ruleType;
         rule.Score = ruleScore;
         rule.EmailOnFail = ruleEmailOnFail;
-        rule.EmailTo = ruleEmailTo;
-        rule.EmailSubject = ruleEmailSubject;
-        rule.EmailBody = ruleEmailBody;
+        if (ruleEmailOnFail) {
+          rule.EmailTo = ruleEmailTo;
+          rule.EmailSubject = ruleEmailSubject;
+          rule.EmailBody = ruleEmailBody;
+        }
         rule.ThresholdCount = this._dbContext.getValueFromResultSet(dataSet, 'THRESHOLD_COUNT');
         rule.ThresholdMinutes = this._dbContext.getValueFromResultSet(dataSet, 'THRESHOLD_MINUTE');
         return rule;
@@ -140,9 +166,11 @@ module.exports = class RuleRepository {
         rule.Type = ruleType;
         rule.Score = ruleScore;
         rule.EmailOnFail = ruleEmailOnFail;
-        rule.EmailTo = ruleEmailTo;
-        rule.EmailSubject = ruleEmailSubject;
-        rule.EmailBody = ruleEmailBody;
+        if (ruleEmailOnFail) {
+          rule.EmailTo = ruleEmailTo;
+          rule.EmailSubject = ruleEmailSubject;
+          rule.EmailBody = ruleEmailBody;
+        }
         rule.ThresholdCount = this._dbContext.getValueFromResultSet(dataSet, 'ACCOUNT_THRESHOLD_COUNT');
         rule.ThresholdMinutes = this._dbContext.getValueFromResultSet(dataSet, 'ACCOUNT_THRESHOLD_MINUTE');
         rule.AccountCountThreshold = this._dbContext.getValueFromResultSet(dataSet, 'ACCOUNT_COUNT_THRESHOLD');
@@ -154,9 +182,11 @@ module.exports = class RuleRepository {
         rule.Type = ruleType;
         rule.Score = ruleScore;
         rule.EmailOnFail = ruleEmailOnFail;
-        rule.EmailTo = ruleEmailTo;
-        rule.EmailSubject = ruleEmailSubject;
-        rule.EmailBody = ruleEmailBody;
+        if (ruleEmailOnFail) {
+          rule.EmailTo = ruleEmailTo;
+          rule.EmailSubject = ruleEmailSubject;
+          rule.EmailBody = ruleEmailBody;
+        }
         rule.Threshold = this._dbContext.getValueFromResultSet(dataSet, 'SCORE_THRESHOLD');
         rule.ChildRules = [];
         for (let i = 0; i < dataSet.rows.length; i++) {

@@ -13,6 +13,7 @@ const ExecuteRuleSetRequest = require('./execute-rule-set-request');
 const ExecuteRuleSetResponse = require('./execute-rule-set-response');
 const ExecuteScoreThresholdRuleRequest = require('./execute-score-threshold-rule-request');
 const ExecuteSourceIpRuleRequest = require('./execute-source-ip-rule-request');
+const GetRulesRequest = require('./get-rules-request');
 const Rule = require('./rule');
 const RuleAccountFrequency = require('./rule-account-frequency');
 const RuleFrequency = require('./rule-frequency');
@@ -36,6 +37,7 @@ module.exports = {
   ExecuteRuleSetResponse,
   ExecuteScoreThresholdRuleRequest,
   ExecuteSourceIpRuleRequest,
+  GetRulesRequest,
   Rule,
   RuleAccountFrequency,
   RuleFrequency,

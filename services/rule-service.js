@@ -37,6 +37,15 @@ module.exports = class RuleService {
   }
 
   /**
+   * Represents a request to get a collection of rules.
+   * @name getRules
+   * @returns {Models.Rules.Rule} A collection of rules.
+   */
+  async getRules(getRulesRequest) {
+    return await this._ruleRepository.selectByRuleSetId(getRulesRequest.RuleSetId);
+  }
+
+  /**
    * Represents a request to create a rule set.
    * @name createRuleSet
    * @param {Models.Rules.CreateRuleSetRequest} createRuleSetRequest - The rule set creation object.

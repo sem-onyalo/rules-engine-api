@@ -76,6 +76,27 @@ describe('RuleService', () => {
     });
   });
 
+  describe('getRules(getRulesRequest)', () => {
+    it('should export function', () => {
+      expect(ruleService.getRules).to.be.a('function');
+    });
+
+    it('should call the rule repository to get a collection of rules', async () => {
+      let rules = [
+        new Models.Rules.Rule(1, 2.5, Models.Rules.RuleType.ACCOUNT_LOCKED, false),
+        new Models.Rules.Rule(2, 7.5, Models.Rules.RuleType.EMAIL_BLOCKLIST, false)
+      ];
+
+      let getRulesStub = sinon.stub(ruleRepository, 'selectByRuleSetId')
+        .returns(Promise.resolve(rules));
+
+      let request = new Models.Rules.GetRulesRequest(9);
+      let actual = await ruleService.getRules(request);
+      sinon.assert.calledOnce(getRulesStub);
+      sinon.assert.calledWith(getRulesStub, 9);
+    });
+  });
+
   describe('createRuleSet(createRuleSetRequest)', () => {
     it('should export function', () => {
       expect(ruleService.createRuleSet).to.be.a('function');
